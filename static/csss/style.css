@@ -1,0 +1,22 @@
+/* static/css/style.css - Dark Cyan Theme */
+:root{
+  --bg:#0b0f12;
+  --card:#0f1720;
+  --muted:#9aa7b2;
+  --accent:#00e5ff;
+  --accent-opaque: rgba(0,229,255,0.08);
+}
+body{background:var(--bg); color:#e6eef6;}
+.card-dark{background:var(--card); border:1px solid rgba(255,255,255,0.02);}
+.auth-card{width:360px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)); border-radius:12px;}
+.text-cyan{color:var(--accent);}
+.link-cyan{color:var(--accent); text-decoration:none;}
+.btn-cyan{background:var(--accent); color:#04202a; border:none;}
+.kpi-card{border-radius:8px;}
+.kpi-title{color:var(--muted); font-weight:600;}
+.kpi-value{color:#ffffff;}
+.logs-panel{height:240px; overflow:auto; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02)); padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.02);}
+.log-line{font-family:monospace; font-size:12px; padding:4px 0; border-bottom:1px dashed rgba(255,255,255,0.02); color:var(--muted);}
+.table-dark thead th{border-bottom:1px solid rgba(255,255,255,0.04);}
+.card-title{margin-bottom:0.5rem;}
+.auth-card input.form-control-dark{background:#071014; color:#e6eef6; border:1px solid rgba(255,255,255,0.03);}

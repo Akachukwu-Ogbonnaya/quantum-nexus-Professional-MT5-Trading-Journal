@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Analysis - Professional MT5 Journal{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-shield-alt text-danger me-2"></i>Risk Analysis Dashboard
+            {% if is_demo_mode %}
+            <span class="badge bg-warning ms-2">Demo Mode</span>
+            {% else %}
+            <span class="badge bg-success ms-2">Live MT5</span>
+            {% endif %}
+        </h1>
+        <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle" type="button" id="periodDropdown" data-bs-toggle="dropdown">
+                <i class="fas fa-calendar me-2"></i>{{ current_period|default('All Time', true)|title }}
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="?period=daily">Daily</a></li>
+                <li><a class="dropdown-item" href="?period=weekly">Weekly</a></li>
+                <li><a class="dropdown-item" href="?period=monthly">Monthly</a></li>
+                <li><a class="dropdown-item" href="?period=3months">3 Months</a></li>
+                <li><a class="dropdown-item" href="?period=6months">6 Months</a></li>
+                <li><a class="dropdown-item" href="?period=1year">1 Year</a></li>
+                <li><a class="dropdown-item" href="?period=all">All Time</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Demo Mode Alert -->
+    {% if is_demo_mode %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Demo Mode Active:</strong> Showing simulated risk analysis data. Connect to live MT5 for real trading data.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <!-- Risk Score Cards -->
+    <div class="row mb-4">
+        <!-- Overall Risk Score -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-{{ 'danger' if risk_metrics.overall_score > 70 else 'warning' if risk_metrics.overall_score > 40 else 'success' }} shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-{{ 'danger' if risk_metrics.overall_score > 70 else 'warning' if risk_metrics.overall_score > 40 else 'success' }} text-uppercase mb-1">
+                                Overall Risk Score
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ "%.1f"|format(risk_metrics.overall_score) }}/100
+                            </div>
+                            <div class="text-xs text-muted mt-1">
+                                {{ risk_metrics.risk_level|default('Moderate', true) }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-thermometer-{{ 'full' if risk_metrics.overall_score > 70 else 'half' if risk_metrics.overall_score > 40 else 'quarter' }} fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Max Drawdown -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-{{ 'danger' if risk_metrics.max_drawdown > 20 else 'warning' if risk_metrics.max_drawdown > 10 else 'success' }} shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-{{ 'danger' if risk_metrics.max_drawdown > 20 else 'warning' if risk_metrics.max_drawdown > 10 else 'success' }} text-uppercase mb-1">
+                                Max Drawdown
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ "%.2f"|format(risk_metrics.max_drawdown) }}%
+                            </div>
+                            <div class="text-xs text-muted mt-1">
+                                Peak-to-Trough Decline
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line-down fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Volatility -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-{{ 'danger' if risk_metrics.volatility_score > 70 else 'warning' if risk_metrics.volatility_score > 40 else 'success' }} shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-{{ 'danger' if risk_metrics.volatility_score > 70 else 'warning' if risk_metrics.volatility_score > 40 else 'success' }} text-uppercase mb-1">
+                                Volatility Score
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ "%.1f"|format(risk_metrics.volatility_score) }}/100
+                            </div>
+                            <div class="text-xs text-muted mt-1">
+                                PnL Fluctuation
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-wave-square fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recovery Factor -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-{{ 'success' if risk_metrics.recovery_factor > 2 else 'warning' if risk_metrics.recovery_factor > 1 else 'danger' }} shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-{{ 'success' if risk_metrics.recovery_factor > 2 else 'warning' if risk_metrics.recovery_factor > 1 else 'danger' }} text-uppercase mb-1">
+                                Recovery Factor
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ "%.2f"|format(risk_metrics.recovery_factor) }}
+                            </div>
+                            <div class="text-xs text-muted mt-1">
+                                Profit vs Drawdown
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-redo fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <!-- Risk Distribution Chart -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Risk Distribution by Trade</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="riskDistributionChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drawdown Analysis -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Drawdown Analysis</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="drawdownChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Risk Metrics -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Risk Concentration</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2">
+                        <canvas id="riskConcentrationChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="mt-4 text-center small">
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-primary"></i> Symbol Risk
+                        </span>
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-success"></i> Strategy Risk
+                        </span>
+                        <span class="mr-2">
+                            <i class="fas fa-circle text-info"></i> Time Risk
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Risk Recommendations</h6>
+                </div>
+                <div class="card-body">
+                    {% for recommendation in risk_recommendations %}
+                    <div class="alert alert-{{ 'danger' if recommendation.priority == 'high' else 'warning' if recommendation.priority == 'medium' else 'info' }} mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-{{ 'exclamation-triangle' if recommendation.priority == 'high' else 'exclamation-circle' if recommendation.priority == 'medium' else 'info-circle' }} me-2"></i>
+                            <strong class="me-2">{{ recommendation['category'] }}:</strong>
+                            {{ recommendation['message'] }}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>No specific recommendations:</strong> Your risk profile appears balanced.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Metrics Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Detailed Risk Metrics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="riskMetricsTable">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                    <th>Benchmark</th>
+                                    <th>Status</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for metric in detailed_metrics %}
+                                <tr>
+                                    <td><strong>{{ metric['name'] }}</strong></td>
+                                    <td>{{ metric['value'] }}</td>
+                                    <td>{{ metric['benchmark'] }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if metric.status == 'Excellent' else 'warning' if metric.status == 'Good' else 'danger' }}">
+                                            {{ metric['status'] }}
+                                        </span>
+                                    </td>
+                                    <td class="small">{{ metric['description'] }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        No risk metrics available in demo mode
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Safe data extraction with fallbacks
+const riskLabels = {{ risk_chart_data.labels|tojson if risk_chart_data and risk_chart_data.labels else [] }};
+const riskValues = {{ risk_chart_data.risk_values|tojson if risk_chart_data and risk_chart_data.risk_values else [] }};
+const drawdownDates = {{ drawdown_chart_data.dates|tojson if drawdown_chart_data and drawdown_chart_data.dates else [] }};
+const drawdownValues = {{ drawdown_chart_data.drawdowns|tojson if drawdown_chart_data and drawdown_chart_data.drawdowns else [] }};
+const concentrationLabels = {{ concentration_chart_data.labels|tojson if concentration_chart_data and concentration_chart_data.labels else ['Symbol Risk', 'Strategy Risk', 'Time Risk'] }};
+const concentrationValues = {{ concentration_chart_data['values']|tojson if concentration_chart_data and 'values' in concentration_chart_data else [40, 35, 25] }};
+
+// Risk Distribution Chart
+const riskCtx = document.getElementById('riskDistributionChart').getContext('2d');
+const riskDistributionChart = new Chart(riskCtx, {
+    type: 'bar',
+    data: {
+        labels: riskLabels,
+        datasets: [{
+            label: 'Risk per Trade (%)',
+            data: riskValues,
+            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Risk %'
+                }
+            }
+        }
+    }
+});
+
+// Drawdown Chart
+const drawdownCtx = document.getElementById('drawdownChart').getContext('2d');
+const drawdownChart = new Chart(drawdownCtx, {
+    type: 'line',
+    data: {
+        labels: drawdownDates,
+        datasets: [{
+            label: 'Drawdown %',
+            data: drawdownValues,
+            borderColor: 'rgba(255, 99, 132, 1)',
+            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                reverse: true,
+                title: {
+                    display: true,
+                    text: 'Drawdown %'
+                }
+            }
+        }
+    }
+});
+
+// Risk Concentration Chart
+const concentrationCtx = document.getElementById('riskConcentrationChart').getContext('2d');
+const concentrationChart = new Chart(concentrationCtx, {
+    type: 'doughnut',
+    data: {
+        labels: concentrationLabels,
+        datasets: [{
+            data: concentrationValues,
+            backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc'],
+            hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf'],
+            hoverBorderColor: "rgba(234, 236, 244, 1)",
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        cutout: '70%',
+    }
+});
+
+// Auto-refresh for live data
+{% if not is_demo_mode %}
+setInterval(() => {
+    fetch('/api/risk_metrics')
+        .then(response => response.json())
+        .then(data => {
+            // Update charts with live data
+            console.log('Live risk data updated:', data);
+        })
+        .catch(error => {
+            console.log('Live data update failed, staying in current state');
+        });
+}, 30000); // Update every 30 seconds
+{% endif %}
+// =============================================================================
+// AUTO-CONNECTION STATUS DETECTION (ADD THIS AT THE END)
+// =============================================================================
+
+// Auto-detect connection status changes
+function checkConnectionStatus() {
+    fetch('/api/connection_status')
+        .then(response => response.json())
+        .then(data => {
+            const currentDemoMode = {{ is_demo_mode|tojson }};
+
+            // If status changed, show notification and optionally reload
+            if (data.is_demo_mode !== currentDemoMode) {
+                showConnectionChangeNotification(data.status);
+
+                // Optional: Auto-refresh page when connection status changes
+                if ({{ auto_refresh|default(false)|tojson }}) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3000);
+                }
+            }
+        })
+        .catch(error => {
+            console.log('Connection status check failed:', error);
+        });
+}
+
+function showConnectionChangeNotification(newStatus) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${newStatus === 'live' ? 'success' : 'warning'} alert-dismissible fade show`;
+    notification.innerHTML = `
+        <i class="fas fa-${newStatus === 'live' ? 'plug' : 'unplug'} me-2"></i>
+        <strong>Connection Status Changed:</strong> Now in ${newStatus.toUpperCase()} mode
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    // Insert at top of page
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(notification, container.firstChild);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Check connection status every 30 seconds
+setInterval(checkConnectionStatus, 30000);
+
+// Initial check when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    checkConnectionStatus();
+});
+</script>
+{% endblock %}

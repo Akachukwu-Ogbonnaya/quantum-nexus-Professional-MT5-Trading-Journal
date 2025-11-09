@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Trade Results — Last 3 months</h2>
+<div class="card bg-secondary p-3">
+  <table class="table table-dark table-striped">
+    <thead><tr><th>Ticket</th><th>Symbol</th><th>Entry</th><th>Exit</th><th>Profit</th></tr></thead>
+    <tbody id="tradesBody">Loading...</tbody>
+  </table>
+</div>
+<script>
+async function loadTrades(){
+  const res = await fetch('/api/trade_results_data?period=3months');
+  const data = await res.json();
+  const body = document.getElementById('tradesBody');
+  body.innerHTML='';
+  (data.trades||[]).forEach(t=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${t.ticket_id}</td><td>${t.symbol}</td><td>${t.entry_time}</td><td>${t.exit_time||''}</td><td>${t.profit}</td>`;
+    body.appendChild(tr);
+  });
+}
+loadTrades();
+</script>
+{% endblock %}

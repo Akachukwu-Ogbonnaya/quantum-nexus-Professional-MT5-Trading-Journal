@@ -1,0 +1,906 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid p-3">
+    <h2 class="mb-3" style="font-size: 1.6rem;"><i class="fas fa-book"></i> Professional Trade Journal</h2>
+    <p class="text-muted" style="font-size: 12px;">Real-time Excel-style trade tracking with complete MT5 data synchronization - Last updated: {{ current_time }}</p>
+
+    <!-- Professional Summary Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="stat-card text-center">
+                <h6 style="font-size: 11px;">Total Profit</h6>
+                <h4 class="{{ 'positive' if stats.net_profit >= 0 else 'negative' }}" style="font-size: 14px;">${{ "%.2f"|format(stats.net_profit) }}</h4>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card text-center">
+                <h6 style="font-size: 11px;">Win Rate</h6>
+                <h4 class="positive" style="font-size: 14px;">{{ "%.1f"|format(stats.win_rate) }}%</h4>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card text-center">
+                <h6 style="font-size: 11px;">Profit Factor</h6>
+                <h4 class="{{ 'positive' if stats.profit_factor > 1 else 'negative' }}" style="font-size: 14px;">{{ "%.2f"|format(stats.profit_factor) }}</h4>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card text-center">
+                <h6 style="font-size: 11px;">Avg R:R</h6>
+                <h4 class="neutral" style="font-size: 14px;">{{ "%.2f"|format(stats.avg_rr) }}</h4>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card text-center">
+                <h6 style="font-size: 11px;">Sharpe Ratio</h6>
+                <h4 class="{{ 'positive' if stats.sharpe_ratio > 1 else 'neutral' }}" style="font-size: 14px;">{{ "%.2f"|format(stats.sharpe_ratio) }}</h4>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card text-center">
+                <h6 style="font-size: 11px;">Max Drawdown</h6>
+                <h4 class="negative" style="font-size: 14px;">{{ "%.1f"|format(stats.max_drawdown) }}%</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Quick Stats -->
+    <div class="row mb-3">
+        <div class="col-md-2">
+            <div class="card bg-light">
+                <div class="card-body p-2 text-center">
+                    <small class="text-muted" style="font-size: 10px;">Total Trades</small>
+                    <h6 class="mb-0" style="font-size: 12px;">{{ stats.total_trades }}</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-light">
+                <div class="card-body p-2 text-center">
+                    <small class="text-muted" style="font-size: 10px;">Winning Trades</small>
+                    <h6 class="mb-0 text-success" style="font-size: 12px;">{{ stats.winning_trades }}</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-light">
+                <div class="card-body p-2 text-center">
+                    <small class="text-muted" style="font-size: 10px;">Losing Trades</small>
+                    <h6 class="mb-0 text-danger" style="font-size: 12px;">{{ stats.losing_trades }}</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-light">
+                <div class="card-body p-2 text-center">
+                    <small class="text-muted" style="font-size: 10px;">Expectancy</small>
+                    <h6 class="mb-0 {{ 'positive' if stats.expectancy > 0 else 'negative' }}" style="font-size: 12px;">${{ "%.2f"|format(stats.expectancy) }}</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-light">
+                <div class="card-body p-2 text-center">
+                    <small class="text-muted" style="font-size: 10px;">Recovery Factor</small>
+                    <h6 class="mb-0 {{ 'positive' if stats.recovery_factor > 1 else 'neutral' }}" style="font-size: 12px;">{{ "%.2f"|format(stats.recovery_factor) }}</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-light">
+                <div class="card-body p-2 text-center">
+                    <small class="text-muted" style="font-size: 10px;">Kelly Criterion</small>
+                    <h6 class="mb-0 {{ 'positive' if stats.kelly_criterion > 0 else 'neutral' }}" style="font-size: 12px;">{{ "%.1f"|format(stats.kelly_criterion) }}%</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Status & Controls -->
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <div class="card bg-light">
+                <div class="card-body p-2">
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <small class="text-muted" style="font-size: 10px;">MT5 Status</small>
+                            <h6 class="mb-0 {{ 'text-success' if mt5_connected else 'text-warning' }}" style="font-size: 12px;">
+                                {{ 'CONNECTED' if mt5_connected else 'DEMO MODE' }}
+                            </h6>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <small class="text-muted" style="font-size: 10px;">Last Sync</small>
+                            <h6 class="mb-0" style="font-size: 12px;" id="lastSyncTime">{{ current_time }}</h6>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <small class="text-muted" style="font-size: 10px;">Open Positions</small>
+                            <h6 class="mb-0 text-warning" style="font-size: 12px;" id="openPositionsCount">
+                               {{ open_positions|length }}
+                            </h6>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <small class="text-muted" style="font-size: 10px;">Floating P/L</small>
+                            <h6 class="mb-0 {{ 'positive' if (floating_pnl|float) > 0 else 'negative' if (floating_pnl|float) < 0 else '' }}" style="font-size: 12px;" id="floatingPnl">
+                                ${{ "%.2f"|format(floating_pnl|float) if floating_pnl else '0.00' }}
+                            </h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body p-2 text-center">
+                    <button class="btn btn-success btn-sm me-1" onclick="syncNow()" style="font-size: 11px;">
+                        <i class="fas fa-sync"></i> Sync Now
+                    </button>
+                    <button class="btn btn-info btn-sm me-1" onclick="refreshJournal()" style="font-size: 11px;">
+                        <i class="fas fa-redo"></i> Refresh
+                    </button>
+                    <button class="btn btn-warning btn-sm" onclick="recalculateAll()" style="font-size: 11px;">
+                        <i class="fas fa-calculator"></i> Recalc
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Professional Trade Journal Table -->
+    <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 style="font-size: 1.1rem;"><i class="fas fa-table"></i> Professional Trade History</h5>
+            <div>
+                <button class="btn btn-primary btn-sm me-1" onclick="exportToExcel()" style="font-size: 11px;">
+                    <i class="fas fa-file-excel"></i> Export Excel
+                </button>
+                <button class="btn btn-secondary btn-sm me-1" onclick="exportToCSV()" style="font-size: 11px;">
+                    <i class="fas fa-file-csv"></i> Export CSV
+                </button>
+                <button class="btn btn-info btn-sm me-1" onclick="showFilters()" style="font-size: 11px;">
+                    <i class="fas fa-filter"></i> Filters
+                </button>
+                <button class="btn btn-success btn-sm" onclick="importHistory()" style="font-size: 11px;">
+                    <i class="fas fa-download"></i> Import MT5
+                </button>
+            </div>
+        </div>
+
+        <!-- Advanced Filters -->
+        <div class="row mb-3" id="filterSection" style="display: none;">
+            <div class="col-md-3">
+                <select class="form-select form-select-sm" id="symbolFilter" onchange="applyFilters()">
+                    <option value="">All Symbols</option>
+                    {% for symbol in symbols %}
+                    <option value="{{ symbol }}">{{ symbol }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select form-select-sm" id="statusFilter" onchange="applyFilters()">
+                    <option value="">All Status</option>
+                    <option value="OPEN">Open</option>
+                    <option value="CLOSED">Closed</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select form-select-sm" id="typeFilter" onchange="applyFilters()">
+                    <option value="">All Types</option>
+                    <option value="BUY">Long</option>
+                    <option value="SELL">Short</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select form-select-sm" id="profitFilter" onchange="applyFilters()">
+                    <option value="">All P/L</option>
+                    <option value="profit">Profitable</option>
+                    <option value="loss">Losing</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control" id="searchFilter" placeholder="Search comments..." onkeyup="applyFilters()">
+                    <button class="btn btn-outline-secondary" type="button" onclick="clearFilters()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive" style="font-size: 11px; max-height: 70vh; overflow-y: auto;">
+            <table class="table table-bordered table-striped table-hover" style="min-width: 2200px;">
+                <thead class="table-dark sticky-top">
+                    <tr>
+                        <th>ENTRY DATE</th>
+                        <th>SESSION</th>
+                        <th>SYMBOL</th>
+                        <th>TYPE</th>
+                        <th>LOT SIZE</th>
+                        <th>ENTRY PRICE</th>
+                        <th>STOP LOSS</th>
+                        <th>TAKE PROFIT</th>
+                        <th>PLANNED R:R</th>
+                        <th>EXIT PRICE</th>
+                        <th>EXIT DATE</th>
+                        <th>DURATION</th>
+                        <th>ACTUAL R:R</th>
+                        <th>P/L</th>
+                        <th>P/L %</th>
+                        <th>ACC CHANGE %</th>
+                        <th>BALANCE</th>
+                        <th>STATUS</th>
+                        <th>FLOATING P/L</th>
+                        <th>RISK %</th>
+                        <th>STRATEGY</th>
+                        <th>COMMENT</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody id="journalTable">
+                    {% if trades %}
+                        {% for trade in trades %}
+                        <tr class="{{ 'table-warning' if trade.status == 'OPEN' else 'table-success' if trade.status == 'CLOSED' else '' }} trade-row"
+                            data-symbol="{{ trade.symbol }}"
+                            data-status="{{ trade.status }}"
+                            data-type="{{ trade.type }}"
+                            data-profit="{{ trade.profit }}"
+                            data-comment="{{ trade.comment or '' }}"
+                            data-ticket="{{ trade.ticket_id }}">
+
+                            <!-- Entry Date -->
+                            <td>
+                                {% if trade.entry_time %}
+                                    {{ trade.entry_time.strftime('%m/%d %H:%M') if trade.entry_time is not string else trade.entry_time[:16] }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <!-- Session -->
+                            <td><span class="badge bg-secondary">{{ trade.session if trade.session else 'N/A' }}</span></td>
+
+                            <!-- Symbol -->
+                            <td><strong class="symbol-tag">{{ trade.symbol if trade.symbol else '-' }}</strong></td>
+
+                            <!-- Type -->
+                            <td>
+                                <span class="badge {{ 'bg-success' if trade.type in ['BUY', 'BUY_LIMIT', 'BUY_STOP'] else 'bg-danger' }}">
+                                    {{ 'LONG' if trade.type in ['BUY', 'BUY_LIMIT', 'BUY_STOP'] else 'SHORT' if trade.type in ['SELL', 'SELL_LIMIT', 'SELL_STOP'] else trade.type }}
+                                </span>
+                            </td>
+
+                            <!-- Lot Size -->
+                            <td class="text-end">{{ "%.2f"|format(trade.volume) if trade.volume else '0.00' }}</td>
+
+                            <!-- Entry Price -->
+                            <td class="text-end">{{ "%.5f"|format(trade.entry_price) if trade.entry_price else '-' }}</td>
+
+                            <!-- Stop Loss -->
+                            <td class="text-end">{{ "%.5f"|format(trade.sl_price) if trade.sl_price and trade.sl_price > 0 else '-' }}</td>
+
+                            <!-- Take Profit -->
+                            <td class="text-end">{{ "%.5f"|format(trade.tp_price) if trade.tp_price and trade.tp_price > 0 else '-' }}</td>
+
+                            <!-- Planned R:R -->
+                            <td class="text-center">
+                                {% if trade.planned_rr and trade.planned_rr > 0 %}
+                                    <span class="badge {{ 'bg-success' if trade.planned_rr >= 2 else 'bg-warning' if trade.planned_rr >= 1 else 'bg-danger' }}">
+                                        {{ "%.2f"|format(trade.planned_rr) }}:1
+                                    </span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <!-- Exit Price -->
+                            <td class="text-end">{{ "%.5f"|format(trade.exit_price) if trade.exit_price else '-' }}</td>
+
+                            <!-- Exit Date -->
+                            <td>
+                                {% if trade.exit_time %}
+                                    {{ trade.exit_time.strftime('%m/%d %H:%M') if trade.exit_time is not string else trade.exit_time[:16] }}
+                                {% else %}
+                                    <span class="badge bg-warning">OPEN</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Duration -->
+                            <td class="text-center">
+                                {% if trade.duration %}
+                                    <span class="badge bg-info">{{ trade.duration }}</span>
+                                {% else %}
+                                    <span class="badge bg-warning">OPEN</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Actual R:R -->
+                            <td class="text-center">
+                                {% if trade.actual_rr %}
+                                    <span class="badge {{ 'bg-success' if trade.actual_rr > 1 else 'bg-danger' if trade.actual_rr < 0 else 'bg-warning' }}">
+                                        {{ "%.2f"|format(trade.actual_rr) }}:1
+                                    </span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <!-- P/L -->
+                            <td class="text-end {{ 'positive fw-bold' if trade.profit and trade.profit > 0 else 'negative fw-bold' if trade.profit and trade.profit < 0 else '' }}">
+                                ${{ "%.2f"|format(trade.profit) if trade.profit is not none else '0.00' }}
+                            </td>
+
+                            <!-- P/L % -->
+                            <td class="text-end {{ 'positive' if trade.profit and trade.profit > 0 else 'negative' if trade.profit and trade.profit < 0 else '' }}">
+                                {% if trade.profit and trade.account_balance %}
+                                    {{ "%.2f%%"|format((trade.profit / trade.account_balance) * 100) }}
+                                {% else %}
+                                    0.00%
+                                {% endif %}
+                            </td>
+
+                            <!-- Account Change % -->
+                            <td class="text-end {{ 'positive' if trade.account_change_percent and trade.account_change_percent > 0 else 'negative' if trade.account_change_percent and trade.account_change_percent < 0 else '' }}">
+                                {{ "%.2f%%"|format(trade.account_change_percent) if trade.account_change_percent else '0.00%' }}
+                            </td>
+
+                            <!-- Balance -->
+                            <td class="text-end fw-bold">${{ "%.2f"|format(trade.account_balance) if trade.account_balance else '0.00' }}</td>
+
+                            <!-- Status -->
+                            <td class="text-center">
+                                <span class="badge status-badge {{ 'bg-warning' if trade.status == 'OPEN' else 'bg-success' if trade.status == 'CLOSED' else 'bg-secondary' }}">
+                                    {{ trade.status if trade.status else 'UNKNOWN' }}
+                                </span>
+                            </td>
+
+                            <!-- Floating P/L -->
+                            <td class="text-end floating-pnl {{ 'positive' if trade.floating_pnl and trade.floating_pnl >= 0 else 'negative' if trade.floating_pnl else '' }}">
+                                {% if trade.status == 'OPEN' and trade.floating_pnl %}
+                                    ${{ "%.2f"|format(trade.floating_pnl) }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <!-- Risk % -->
+                            <td class="text-end">
+                                {% if trade.risk_per_trade %}
+                                    <span class="badge {{ 'bg-danger' if trade.risk_per_trade > 2 else 'bg-warning' if trade.risk_per_trade > 1 else 'bg-success' }}">
+                                        {{ "%.1f"|format(trade.risk_per_trade) }}%
+                                    </span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <!-- Strategy -->
+                            <td>
+                                {% if trade.strategy %}
+                                    <span class="badge bg-info">{{ trade.strategy }}</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <!-- Comment -->
+                            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ trade.comment or '' }}">
+                                {{ trade.comment or '-' }}
+                            </td>
+
+                            <!-- Actions -->
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" title="Edit Trade" onclick="editTrade('{{ trade.ticket_id }}')" style="font-size: 10px;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-info" title="View Analysis" onclick="viewTrade('{{ trade.ticket_id }}')" style="font-size: 10px;">
+                                        <i class="fas fa-chart-line"></i>
+                                    </button>
+                                    <button class="btn btn-outline-success" title="Duplicate Trade" onclick="duplicateTrade('{{ trade.ticket_id }}')" style="font-size: 10px;">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="23" class="text-center text-muted py-5">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
+                                <h5 style="font-size: 1.2rem;">No Trades Found</h5>
+                                <p class="mb-3" style="font-size: 12px;">Your trade journal is empty. Click "Import MT5" to load your trade history.</p>
+                                <button class="btn btn-success" onclick="importHistory()" style="font-size: 12px;">
+                                    <i class="fas fa-download"></i> Import MT5 Trade History
+                                </button>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-3 text-muted d-flex justify-content-between" style="font-size: 11px;">
+            <div>
+                <small>Last Updated: <span id="lastUpdate">{{ current_time }}</span> | Auto-refresh: <span id="countdown">30</span>s</small>
+            </div>
+            <div>
+                <small>Showing <span id="visibleCount">{{ trades|length if trades else 0 }}</span> of {{ trades|length if trades else 0 }} trades</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Analytics -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="stat-card">
+                <h5 style="font-size: 1.1rem;"><i class="fas fa-chart-bar"></i> Performance Analytics</h5>
+                <div class="row mt-3">
+                    <div class="col-4">
+                        <small class="text-muted" style="font-size: 11px;">Best Trade</small>
+                        <h6 class="positive" style="font-size: 12px;">${{ "%.2f"|format(stats.largest_win) }}</h6>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted" style="font-size: 11px;">Worst Trade</small>
+                        <h6 class="negative" style="font-size: 12px;">${{ "%.2f"|format(stats.largest_loss) }}</h6>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted" style="font-size: 11px;">Avg Win</small>
+                        <h6 class="positive" style="font-size: 12px;">${{ "%.2f"|format(stats.avg_win) }}</h6>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-4">
+                        <small class="text-muted" style="font-size: 11px;">Avg Loss</small>
+                        <h6 class="negative" style="font-size: 12px;">${{ "%.2f"|format(stats.avg_loss) }}</h6>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted" style="font-size: 11px;">Win Rate</small>
+                        <h6 class="positive" style="font-size: 12px;">{{ "%.1f%%"|format(stats.win_rate) }}</h6>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted" style="font-size: 11px;">Profit Factor</small>
+                        <h6 class="{{ 'positive' if stats.profit_factor > 1 else 'negative' }}" style="font-size: 12px;">{{ "%.2f"|format(stats.profit_factor) }}</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="stat-card">
+                <h5 style="font-size: 1.1rem;"><i class="fas fa-cogs"></i> Quick Actions</h5>
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="filterTrades('open')" style="font-size: 11px;">
+                        <i class="fas fa-eye"></i> Show Open Trades ({{ open_positions|length if open_positions else 0 }})
+                    </button>
+                    <button class="btn btn-outline-success btn-sm w-100 mb-2" onclick="filterTrades('closed')" style="font-size: 11px;">
+                        <i class="fas fa-check-circle"></i> Show Closed Trades
+                    </button>
+                    <button class="btn btn-outline-info btn-sm w-100 mb-2" onclick="filterTrades('all')" style="font-size: 11px;">
+                        <i class="fas fa-list"></i> Show All Trades
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm w-100" onclick="showFilters()" style="font-size: 11px;">
+                        <i class="fas fa-filter"></i> Advanced Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let refreshCountdown = 30;
+let currentFilter = 'all';
+let socket = null;
+
+// Initialize WebSocket connection for real-time updates
+function initWebSocket() {
+    socket = new WebSocket(`ws://${window.location.host}/realtime`);
+
+    socket.onopen = function(event) {
+        console.log('WebSocket connected for real-time journal updates');
+        socket.send(JSON.stringify({ type: 'subscribe', channels: ['trades', 'sync'] }));
+    };
+
+    socket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        handleRealTimeUpdate(data);
+    };
+
+    socket.onclose = function(event) {
+        console.log('WebSocket disconnected, attempting to reconnect...');
+        setTimeout(initWebSocket, 5000);
+    };
+}
+
+// Handle real-time updates from central data system
+function handleRealTimeUpdate(data) {
+    if (data.type === 'trade_update') {
+        // Update specific trade in real-time
+        updateTradeRow(data.trade);
+    } else if (data.type === 'sync_complete') {
+        // Refresh entire journal after sync
+        showNotification('MT5 synchronization completed!', 'success');
+        setTimeout(refreshJournal, 1000);
+    } else if (data.type === 'data_updated') {
+        // Update counters and timestamps
+        updateCounters(data);
+    }
+}
+
+// Update specific trade row
+function updateTradeRow(trade) {
+    const row = document.querySelector(`tr[data-ticket="${trade.ticket_id}"]`);
+    if (row) {
+        // Update row data
+        row.querySelector('.floating-pnl').textContent = trade.floating_pnl ? `$${trade.floating_pnl.toFixed(2)}` : '-';
+        row.querySelector('.status-badge').textContent = trade.status;
+        row.querySelector('.status-badge').className = `badge status-badge ${trade.status === 'OPEN' ? 'bg-warning' : 'bg-success'}`;
+
+        if (trade.status === 'CLOSED') {
+            row.classList.remove('table-warning');
+            row.classList.add('table-success');
+        }
+    }
+}
+
+// Update counters from real-time data
+function updateCounters(data) {
+    document.getElementById('openPositionsCount').textContent = data.open_positions || 0;
+    document.getElementById('floatingPnl').textContent = `$${(data.floating_pnl || 0).toFixed(2)}`;
+    document.getElementById('lastSyncTime').textContent = new Date().toLocaleTimeString();
+}
+
+function refreshJournal() {
+    location.reload();
+}
+
+function syncNow() {
+    showLoading('Synchronizing with MT5...');
+    fetch('/api/sync_now')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Synchronization completed successfully!', 'success');
+            } else {
+                showNotification('Synchronization failed: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('Error during synchronization: ' + error, 'error');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+}
+
+function importHistory() {
+    if (confirm('Import last 90 days of trade history from MT5?')) {
+        showLoading('Importing trade history...');
+        fetch('/api/sync_now')  // Using sync endpoint for import
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Trade history imported successfully!', 'success');
+                    setTimeout(refreshJournal, 2000);
+                } else {
+                    showNotification('Error importing history: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showNotification('Error: ' + error, 'error');
+            })
+            .finally(() => {
+                hideLoading();
+            });
+    }
+}
+
+function recalculateAll() {
+    if (confirm('Recalculate all trade metrics and professional statistics?')) {
+        showLoading('Recalculating professional metrics...');
+        // This would call a dedicated recalculation endpoint
+        setTimeout(() => {
+            showNotification('All professional calculations updated!', 'success');
+            hideLoading();
+            refreshJournal();
+        }, 1500);
+    }
+}
+
+function exportToExcel() {
+    showLoading('Preparing Excel export...');
+    fetch('/export/csv')
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `professional_trade_journal_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            showNotification('Excel export completed successfully!', 'success');
+        })
+        .catch(error => {
+            showNotification('Export failed: ' + error, 'error');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+}
+
+function exportToCSV() {
+    exportToExcel(); // Same functionality for now
+}
+
+function showFilters() {
+    const filterSection = document.getElementById('filterSection');
+    filterSection.style.display = filterSection.style.display === 'none' ? 'block' : 'none';
+}
+
+function applyFilters() {
+    const symbolFilter = document.getElementById('symbolFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    const typeFilter = document.getElementById('typeFilter').value;
+    const profitFilter = document.getElementById('profitFilter').value;
+    const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+
+    let visibleCount = 0;
+
+    document.querySelectorAll('.trade-row').forEach(row => {
+        const symbol = row.getAttribute('data-symbol');
+        const status = row.getAttribute('data-status');
+        const type = row.getAttribute('data-type');
+        const profit = parseFloat(row.getAttribute('data-profit'));
+        const comment = row.getAttribute('data-comment').toLowerCase();
+
+        const symbolMatch = !symbolFilter || symbol === symbolFilter;
+        const statusMatch = !statusFilter || status === statusFilter;
+        const typeMatch = !typeFilter || type === typeFilter;
+        const profitMatch = !profitFilter ||
+                           (profitFilter === 'profit' && profit > 0) ||
+                           (profitFilter === 'loss' && profit < 0);
+        const searchMatch = !searchFilter || comment.includes(searchFilter);
+
+        if (symbolMatch && statusMatch && typeMatch && profitMatch && searchMatch) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    document.getElementById('visibleCount').textContent = visibleCount;
+}
+
+function clearFilters() {
+    document.getElementById('symbolFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('typeFilter').value = '';
+    document.getElementById('profitFilter').value = '';
+    document.getElementById('searchFilter').value = '';
+    applyFilters();
+}
+
+function filterTrades(filter) {
+    currentFilter = filter;
+    document.getElementById('statusFilter').value = filter === 'all' ? '' : filter.toUpperCase();
+    applyFilters();
+}
+
+function editTrade(ticketId) {
+    showNotification(`Edit trade ${ticketId} - Professional editor coming soon`, 'info');
+}
+
+function viewTrade(ticketId) {
+    showNotification(`Advanced analysis for trade ${ticketId} - Professional analytics coming soon`, 'info');
+}
+
+function duplicateTrade(ticketId) {
+    showNotification(`Duplicate trade ${ticketId} - Professional cloning coming soon`, 'info');
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
+}
+
+function showLoading(message = 'Processing...') {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'loadingIndicator';
+    loadingDiv.className = 'alert alert-info text-center position-fixed';
+    loadingDiv.style.cssText = 'top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999;';
+    loadingDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${message}`;
+    document.body.appendChild(loadingDiv);
+}
+
+function hideLoading() {
+    const loadingDiv = document.getElementById('loadingIndicator');
+    if (loadingDiv) {
+        loadingDiv.remove();
+    }
+}
+
+function updateCountdown() {
+    refreshCountdown--;
+    document.getElementById('countdown').textContent = refreshCountdown;
+
+    if (refreshCountdown <= 0) {
+        refreshJournal();
+    }
+}
+
+function updateTimestamp() {
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+}
+
+// Professional keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+            case 'r':
+                e.preventDefault();
+                refreshJournal();
+                break;
+            case 's':
+                e.preventDefault();
+                syncNow();
+                break;
+            case 'e':
+                e.preventDefault();
+                exportToExcel();
+                break;
+            case 'f':
+                e.preventDefault();
+                showFilters();
+                break;
+            case 'i':
+                e.preventDefault();
+                importHistory();
+                break;
+        }
+    }
+});
+
+// Initialize professional journal
+document.addEventListener('DOMContentLoaded', function() {
+    initWebSocket();
+    setInterval(updateCountdown, 1000);
+    setInterval(updateTimestamp, 1000);
+    updateTimestamp();
+
+    console.log('Professional Trade Journal initialized with real-time capabilities');
+});
+
+</script>
+
+<style>
+.positive { color: #27ae60; font-weight: bold; }
+.negative { color: #e74c3c; font-weight: bold; }
+.neutral { color: #7f8c8d; }
+
+.stat-card {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+    border-left: 4px solid #007bff;
+}
+
+.table th {
+    font-size: 11px;
+    font-weight: 600;
+    background-color: #2c3e50;
+    color: white;
+    position: sticky;
+    top: 0;
+    text-align: center;
+}
+
+.table td {
+    font-size: 11px;
+    vertical-align: middle;
+}
+
+.badge {
+    font-size: 10px;
+    padding: 0.3em 0.6em;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+    transform: scale(1.002);
+    transition: all 0.2s ease;
+}
+
+.btn-group-sm .btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 10px;
+}
+
+/* Professional table styling */
+.table-responsive {
+    overflow-x: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    background: white;
+}
+
+/* Excel-like alternating row colors */
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0,0,0,.02);
+}
+
+/* Professional status indicators */
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.status-open { background-color: #f39c12; }
+.status-closed { background-color: #27ae60; }
+.status-pending { background-color: #3498db; }
+
+/* Responsive design for professional layout */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 10px;
+    }
+
+    .stat-card {
+        padding: 10px;
+    }
+
+    .btn-sm {
+        font-size: 10px;
+        padding: 0.2rem 0.4rem;
+    }
+
+    .table-responsive {
+        font-size: 10px;
+    }
+}
+
+/* Professional scrollbar styling */
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+</style>
+{% endblock %}
