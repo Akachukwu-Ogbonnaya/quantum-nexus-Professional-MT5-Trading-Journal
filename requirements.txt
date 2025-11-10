@@ -2,7 +2,7 @@ Flask==2.3.3
 flask-socketio==5.3.6
 python-socketio==5.8.0
 eventlet==0.33.3
-pandas==2.2.2
+pandas>=2.3.0
 numpy==1.26.4
 Flask-Login==0.6.3
 Flask-WTF==1.2.1
