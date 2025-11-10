@@ -5,13 +5,13 @@ COMPLETE PROFESSIONAL MT5 TRADING JOURNAL
 - Real-time synchronization
 - Professional UI/UX design
 - Comprehensive error handling
+- PostgreSQL database support
 """
 
 import os
 import json
 import threading
 import queue
-import sqlite3
 import time
 import io
 import csv
@@ -19,6 +19,12 @@ import calendar
 from datetime import datetime, timedelta, date
 from decimal import Decimal, InvalidOperation
 
+# Database imports
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import sqlite3  # Keep for potential fallback or local development
+
+# Flask imports
 from flask import (Flask, render_template, request, redirect, url_for, session,
                    jsonify, send_file, abort, flash, Response)
 from flask_session import Session
@@ -27,13 +33,18 @@ from flask_login import LoginManager, login_user, login_required, logout_user, c
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SelectField, TextAreaField, FloatField
-from wtforms.fields import DateField  # ← ADD THIS LINE
+from wtforms.fields import DateField
 from wtforms.validators import DataRequired, Optional
+
+# Data analysis imports
 import pandas as pd
 import numpy as np
+
+# Logging imports
 import logging
 from logging.handlers import RotatingFileHandler
-# SocketIO
+
+# SocketIO imports
 from flask_socketio import SocketIO, emit
 
 # -----------------------------------------------------------------------------
@@ -434,88 +445,105 @@ add_log = advanced_logger.add_log
 add_log('INFO', 'Professional MT5 Trading Journal Started', 'System')
 
 # -----------------------------------------------------------------------------
-# Database Setup with Advanced Schema
+# Database Setup with Advanced Schema (PostgreSQL Version)
 # -----------------------------------------------------------------------------
-DB_DIR = 'database'
-DB_PATH = os.path.join(DB_DIR, 'trades.db')
-BACKUP_DIR = os.path.join(DB_DIR, 'backups')
+
+def get_db_connection():
+    """Get PostgreSQL database connection"""
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url:
+        # Fix common URL format issue
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+    else:
+        # Fallback for local development
+        conn = psycopg2.connect(
+            host=os.environ.get('PGHOST'),
+            database=os.environ.get('PGDATABASE'),
+            user=os.environ.get('PGUSER'),
+            password=os.environ.get('PGPASSWORD'),
+            port=os.environ.get('PGPORT', 5432),
+            cursor_factory=RealDictCursor
+        )
+    return conn
 
 def init_database():
-    """Initialize database with comprehensive schema"""
-    conn = sqlite3.connect(DB_PATH)
+    """Initialize database with comprehensive schema (PostgreSQL)"""
+    conn = get_db_connection()
     c = conn.cursor()
 
-    # Users table
+    # Users table (PostgreSQL syntax)
     c.execute('''
     CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(80) UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
-        email TEXT,
+        email VARCHAR(120),
         preferences TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_login DATETIME
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_login TIMESTAMP
     )
     ''')
 
-    # Enhanced trades table
+    # Enhanced trades table (PostgreSQL syntax)
     c.execute('''
     CREATE TABLE IF NOT EXISTS trades (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         ticket_id INTEGER UNIQUE,
-        symbol TEXT NOT NULL,
-        type TEXT CHECK(type IN ('BUY', 'SELL', 'BUY_LIMIT', 'SELL_LIMIT', 'BUY_STOP', 'SELL_STOP')),
+        symbol VARCHAR(50) NOT NULL,
+        type VARCHAR(20) CHECK(type IN ('BUY', 'SELL', 'BUY_LIMIT', 'SELL_LIMIT', 'BUY_STOP', 'SELL_STOP')),
         volume REAL NOT NULL,
         entry_price REAL NOT NULL,
         current_price REAL,
         exit_price REAL,
         sl_price REAL,
         tp_price REAL,
-        entry_time DATETIME NOT NULL,
-        exit_time DATETIME,
+        entry_time TIMESTAMP NOT NULL,
+        exit_time TIMESTAMP,
         profit REAL DEFAULT 0,
         commission REAL DEFAULT 0,
         swap REAL DEFAULT 0,
         comment TEXT,
         magic_number INTEGER,
-        session TEXT,
+        session VARCHAR(50),
         planned_rr REAL,
         actual_rr REAL,
-        duration TEXT,
+        duration VARCHAR(50),
         account_balance REAL,
         account_equity REAL,
         account_change_percent REAL,
-        status TEXT CHECK(status IN ('OPEN', 'CLOSED', 'PENDING', 'CANCELLED')) DEFAULT 'OPEN',
+        status VARCHAR(20) CHECK(status IN ('OPEN', 'CLOSED', 'PENDING', 'CANCELLED')) DEFAULT 'OPEN',
         floating_pnl REAL DEFAULT 0,
         risk_per_trade REAL,
         margin_used REAL,
-        strategy TEXT,
+        strategy VARCHAR(100),
         tags TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
 
-    # Account history for equity curve
+    # Account history for equity curve (PostgreSQL syntax)
     c.execute('''
     CREATE TABLE IF NOT EXISTS account_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp DATETIME NOT NULL,
+        id SERIAL PRIMARY KEY,
+        timestamp TIMESTAMP NOT NULL,
         balance REAL NOT NULL,
         equity REAL NOT NULL,
         margin REAL,
         free_margin REAL,
         leverage INTEGER,
-        currency TEXT,
-        server TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        currency VARCHAR(10),
+        server VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
 
-    # Calendar PnL for daily performance (ENHANCED)
+    # Calendar PnL for daily performance (PostgreSQL syntax)
     c.execute('''
     CREATE TABLE IF NOT EXISTS calendar_pnl (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         date DATE UNIQUE NOT NULL,
         daily_pnl REAL NOT NULL DEFAULT 0,
         closed_trades INTEGER DEFAULT 0,
@@ -531,19 +559,19 @@ def init_database():
         daily_goal REAL DEFAULT 0,
         goal_achieved BOOLEAN DEFAULT FALSE,
         notes TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
 
-    # Trade plans table
+    # Trade plans table (PostgreSQL syntax)
     c.execute('''
     CREATE TABLE IF NOT EXISTS trade_plans (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         date DATE NOT NULL,
-        symbol TEXT NOT NULL,
+        symbol VARCHAR(50) NOT NULL,
         trade_plan TEXT,
-        direction TEXT CHECK(direction IN ('LONG', 'SHORT', 'BOTH')),
+        direction VARCHAR(10) CHECK(direction IN ('LONG', 'SHORT', 'BOTH')),
         condition TEXT,
         entry_price REAL,
         stop_loss REAL,
@@ -551,31 +579,31 @@ def init_database():
         target_profit REAL,
         risk_reward_ratio REAL,
         confidence_level INTEGER CHECK(confidence_level >= 1 AND confidence_level <= 5),
-        status TEXT CHECK(status IN ('PENDING', 'EXECUTED', 'CANCELLED', 'EXPIRED')) DEFAULT 'PENDING',
+        status VARCHAR(20) CHECK(status IN ('PENDING', 'EXECUTED', 'CANCELLED', 'EXPIRED')) DEFAULT 'PENDING',
         outcome TEXT,
         actual_profit REAL,
         notes TEXT,
         image_path TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
 
-    # Market analysis table
+    # Market analysis table (PostgreSQL syntax)
     c.execute('''
     CREATE TABLE IF NOT EXISTS market_analysis (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         date DATE NOT NULL,
-        symbol TEXT NOT NULL,
-        timeframe TEXT,
-        analysis_type TEXT,
-        sentiment TEXT,
+        symbol VARCHAR(50) NOT NULL,
+        timeframe VARCHAR(20),
+        analysis_type VARCHAR(50),
+        sentiment VARCHAR(20),
         key_levels TEXT,
         news_impact TEXT,
         technical_analysis TEXT,
         fundamental_analysis TEXT,
-        risk_level TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        risk_level VARCHAR(20),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''')
 
@@ -588,41 +616,19 @@ def init_database():
     c.execute('CREATE INDEX IF NOT EXISTS idx_account_history_timestamp ON account_history(timestamp)')
 
     conn.commit()
+    c.close()
     conn.close()
 
-    add_log('INFO', 'Database initialized with advanced schema', 'Database')
+    print("✅ PostgreSQL database initialized successfully!")
 
-def backup_database():
-    """Create database backup"""
-    try:
-        if not os.path.exists(BACKUP_DIR):
-            os.makedirs(BACKUP_DIR)
-
-        backup_file = os.path.join(
-            BACKUP_DIR,
-            f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
-        )
-
-        # Simple file copy for SQLite
-        import shutil
-        shutil.copy2(DB_PATH, backup_file)
-
-        # Clean old backups (keep last 7)
-        backups = sorted([f for f in os.listdir(BACKUP_DIR) if f.startswith('backup_')])
-        for old_backup in backups[:-7]:
-            os.remove(os.path.join(BACKUP_DIR, old_backup))
-
-        add_log('INFO', f'Database backup created: {backup_file}', 'Database')
-        return True
-    except Exception as e:
-        add_log('ERROR', f'Database backup failed: {e}', 'Database')
-        return False
+# Remove or comment out the backup_database function since it's SQLite-specific
+# def backup_database():
+#     ... 
 
 # Initialize database
 init_database()
-
 # -----------------------------------------------------------------------------
-# User Management
+# User Management (PostgreSQL Version)
 # -----------------------------------------------------------------------------
 class User(UserMixin):
     def __init__(self, id_, username, password_hash, email=None, preferences=None):
@@ -634,24 +640,26 @@ class User(UserMixin):
 
     @staticmethod
     def get(user_id):
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('SELECT id, username, password_hash, email, preferences FROM users WHERE id = ?', (user_id,))
+        cur.execute('SELECT id, username, password_hash, email, preferences FROM users WHERE id = %s', (user_id,))
         row = cur.fetchone()
+        cur.close()
         conn.close()
         if row:
-            return User(row[0], row[1], row[2], row[3], json.loads(row[4] if row[4] else '{}'))
+            return User(row['id'], row['username'], row['password_hash'], row['email'], json.loads(row['preferences'] if row['preferences'] else '{}'))
         return None
 
     @staticmethod
     def get_by_username(username):
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('SELECT id, username, password_hash, email, preferences FROM users WHERE username = ?', (username,))
+        cur.execute('SELECT id, username, password_hash, email, preferences FROM users WHERE username = %s', (username,))
         row = cur.fetchone()
+        cur.close()
         conn.close()
         if row:
-            return User(row[0], row[1], row[2], row[3], json.loads(row[4] if row[4] else '{}'))
+            return User(row['id'], row['username'], row['password_hash'], row['email'], json.loads(row['preferences'] if row['preferences'] else '{}'))
         return None
 
     @staticmethod
@@ -659,26 +667,34 @@ class User(UserMixin):
         password_hash = generate_password_hash(password)
         preferences = json.dumps({'theme': 'dark', 'notifications': True})
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cur = conn.cursor()
         try:
+            # PostgreSQL uses %s placeholders and RETURNING id
             cur.execute(
-                'INSERT INTO users (username, password_hash, email, preferences) VALUES (?, ?, ?, ?)',
+                'INSERT INTO users (username, password_hash, email, preferences) VALUES (%s, %s, %s, %s) RETURNING id',
                 (username, password_hash, email, preferences)
             )
+            user_id = cur.fetchone()['id']
             conn.commit()
-            user_id = cur.lastrowid
             return User(user_id, username, password_hash, email, json.loads(preferences))
-        except sqlite3.IntegrityError:
+        except psycopg2.IntegrityError:
+            conn.rollback()
+            return None
+        except Exception as e:
+            conn.rollback()
+            print(f"Database error in User.create: {e}")
             return None
         finally:
+            cur.close()
             conn.close()
 
     def update_last_login(self):
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', (self.id,))
+        cur.execute('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = %s', (self.id,))
         conn.commit()
+        cur.close()
         conn.close()
 
 @login_manager.user_loader
