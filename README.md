@@ -1,417 +1,432 @@
-Warehouse Management System (WMS)
+Professional MT5 Trading Journal
+<div align="center">
 https://img.shields.io/badge/version-2.0.0-blue.svg
-https://img.shields.io/badge/python-3.8%252B-green.svg
-https://img.shields.io/badge/flask-2.3.0%252B-lightgrey.svg
-https://img.shields.io/badge/license-Proprietary-orange.svg
+https://img.shields.io/badge/python-3.8+-green.svg
+https://img.shields.io/badge/flask-2.3+-lightgrey.svg
+https://img.shields.io/badge/metatrader-5-compatible-orange.svg
 
-A comprehensive, IFRS-compliant Warehouse Management System with integrated accounting automation, multi-currency support, and advanced analytics. Built for enterprises requiring robust inventory control, financial management, and real-time business intelligence.
+Advanced Trading Analytics Platform with Universal MT5 Integration
+
+Features • Installation • Usage • Configuration • API
+
+</div>
+🌟 Overview
+The Professional MT5 Trading Journal is a comprehensive, enterprise-grade trading analytics platform designed for serious traders. It provides universal adaptability to any MT5 account, advanced trading analytics, real-time synchronization, and professional UI/UX design.
+
+Built with Flask and featuring a modern web interface, this application transforms raw MT5 trading data into actionable insights through sophisticated analytics, risk management tools, and performance tracking.
 
 🚀 Key Features
-📦 Inventory Management
-Multi-Warehouse Support - Manage multiple warehouse locations with stock transfers
+📊 Advanced Analytics & Dashboard
+Executive Dashboard: Comprehensive overview of trading performance
 
-Real-time Stock Tracking - Live inventory updates with audit trails
+Real-time Statistics: Win rate, profit factor, Sharpe ratio, and more
 
-Automated Reordering - Smart reorder level alerts and purchase suggestions
+Performance Metrics: Daily, weekly, monthly, and custom period analysis
 
-Barcode Integration - Support for barcode scanning and inventory counts
+Equity Curve Tracking: Visualize account growth and drawdowns
 
-Stock Take Management - Scheduled and ad-hoc inventory counting
+🔄 Universal MT5 Integration
+Automatic Detection: Seamlessly connects to any MT5 account
 
-💰 Accounting & Finance
-IFRS-Compliant Accounting - Full double-entry bookkeeping system
+Real-time Synchronization: Live trade updates and position tracking
 
-Automated Journal Entries - Real-time accounting for all transactions
+Demo Mode: Full functionality without MT5 connection
 
-Multi-Currency Support - 30+ currencies with exchange rate handling
+Universal Configuration: Adapts to any broker and account type
 
-Financial Statements - Balance Sheet, Profit & Loss, Cash Flow, Trial Balance
+📈 Professional Risk Management
+Risk Analysis Dashboard: Comprehensive risk metrics and scoring
 
-Creditor/Debtor Management - Complete accounts payable/receivable tracking
+Drawdown Analysis: Maximum and current drawdown monitoring
 
-📊 Analytics & Reporting
-Real-time Dashboards - Executive overview with key performance indicators
+Position Sizing: Advanced risk-based position calculations
 
-Sales Analytics - Product performance, customer behavior, trend analysis
+Risk Recommendations: AI-powered risk management suggestions
 
-Financial Ratios - Current ratio, profit margins, return on assets
+📅 Calendar & Performance Tracking
+Daily P&L Calendar: Visual monthly performance tracking
 
-Export Capabilities - PDF, Excel, CSV reports with customizable formats
+Trade Journal: Detailed trade analysis and note-taking
 
-AI-Powered Insights - Predictive analytics and business intelligence
+Performance Trends: Identify patterns and improvement areas
 
-🛡️ Security & Compliance
-Role-Based Access Control - Admin, Manager, Sales personnel roles
+Goal Tracking: Set and monitor trading objectives
 
-Audit Trail - Complete transaction history and user activity logging
+🧠 AI-Powered Insights
+Quantum AI Q&A: Intelligent trading analysis and recommendations
 
-Data Encryption - Secure sensitive business data
+Psychology Analysis: Mood tracking and emotional state monitoring
 
-License Management - Software activation and compliance tracking
+Market Analysis: Context-aware market insights
 
-Backup & Restore - Automated data protection and recovery
+Coach Advice: Personalized trading improvement suggestions
 
-🏗️ System Architecture
-Technology Stack
-Backend: Python 3.8+, Flask 2.3+
+🛠️ Advanced Features
+Trade Planning: Pre-trade analysis and strategy planning
 
-Database: SQLite (Production: PostgreSQL ready)
+Psychology Log: Track emotional state and trading mindset
 
-ORM: SQLAlchemy with Flask-Migrate
+Export Capabilities: CSV and PDF reporting
 
-Authentication: Flask-Login with password hashing
+Real-time WebSocket: Live updates and notifications
 
-Frontend: HTML5, CSS3, JavaScript, Bootstrap 5
+Multi-user Support: Secure user authentication system
 
-Reporting: ReportLab (PDF), Pandas (Excel/CSV)
-
-Security: CSRF protection, input validation, security headers
-
-Core Modules
-text
-app/
-├── accounting/          # IFRS-compliant accounting engine
-├── inventory/          # Stock management & warehouse operations
-├── analytics/          # Business intelligence & reporting
-├── security/           # Authentication & authorization
-├── api/               # RESTful API endpoints
-└── templates/         # Web interface templates
-📋 Prerequisites
+🛠 Installation
+Prerequisites
 Python 3.8 or higher
 
-4GB RAM minimum (8GB recommended)
+MetaTrader 5 (optional - runs in demo mode without MT5)
 
-500MB disk space
+Modern web browser
 
-Modern web browser (Chrome, Firefox, Safari, Edge)
-
-🛠️ Installation
-Quick Start (Development)
-Clone and setup
+Quick Start
+Clone or Download the Application
 
 bash
 git clone <repository-url>
-cd warehouse-management-system
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-Install dependencies
+cd mt5-trading-journal
+Install Python Dependencies
 
 bash
 pip install -r requirements.txt
-Initialize database
-
-bash
-python -c "from app import init_db; init_db()"
-Configure environment
-
-bash
-cp .env.example .env
-# Edit .env with your configuration
-Start application
+Initialize the Application
 
 bash
 python app.py
-Access the application at: http://localhost:5001
+The application will automatically:
 
-Production Deployment
-Docker Deployment
-dockerfile
-FROM python:3.9-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-EXPOSE 5000
-CMD ["gunicorn", "app:app", "-b", "0.0.0.0:5000"]
-Traditional Deployment
-Set up reverse proxy (nginx/Apache)
+Create necessary directory structure
 
-Configure production database (PostgreSQL)
+Initialize the database with advanced schema
 
-Set environment variables
+Generate default configuration
 
-Run with Gunicorn:
+Start the web server
 
-bash
-gunicorn -w 4 -b 0.0.0.0:5000 app:app
+Access the Application
+
+text
+Open your browser and navigate to: http://127.0.0.1:5000
+Default Login
+Username: Any username (auto-created)
+
+Password: Any password (auto-created)
+
 ⚙️ Configuration
-Environment Variables
-env
-# Security
-SECRET_KEY=your-production-secret-key
-DEBUG=False
+Automatic Configuration
+The application automatically creates a config.json file with universal defaults:
 
-# Database
-DATABASE_URL=postgresql://user:password@localhost/wms
-
-# Features
-ENABLE_AI_ANALYTICS=True
-MULTI_CURRENCY=True
-BACKUP_ENABLED=True
-
-# Email (for notifications)
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password
-Initial Setup
-Default Admin Login
-
-Username: admin
-
-Password: admin123
-
-Change password immediately after first login
-
-Company Settings
-
-Configure company name, address, contact information
-
-Set base currency and financial year
-
-Upload company logo for professional invoices
-
-Warehouse Setup
-
-Create primary warehouse
-
-Define product categories
-
-Set up suppliers and customers
-
-📖 User Guide
-For Administrators
-Dashboard: Overview of business performance
-
-User Management: Create and manage user accounts
-
-Financial Reports: Generate accounting statements
-
-System Configuration: Configure company settings and preferences
-
-For Sales Personnel
-Point of Sale: Process customer transactions
-
-Product Catalog: Browse available inventory
-
-Customer Management: Handle customer accounts and credit sales
-
-Sales Reports: View personal performance metrics
-
-For Managers
-Inventory Control: Monitor stock levels and reordering
-
-Sales Analytics: Analyze business performance
-
-Financial Overview: Track revenue and expenses
-
-Staff Management: Oversee sales team activities
-
-🔌 API Documentation
-Authentication
-All API endpoints require authentication. Include the session token in requests.
-
-Key Endpoints
-Sales API
-http
-POST /api/sales
-Content-Type: application/json
-
+json
 {
-  "product_id": 123,
-  "quantity": 2,
-  "payment_method": "cash",
-  "customer_name": "John Doe"
+  "mt5": {
+    "terminal_path": "C:\\Program Files\\MetaTrader 5\\terminal64.exe",
+    "account": 0,
+    "password": "",
+    "server": ""
+  },
+  "web_app": {
+    "secret_key": "auto-generated",
+    "host": "127.0.0.1",
+    "port": 5000,
+    "debug": false
+  },
+  "sync": {
+    "auto_sync_interval": 300,
+    "days_history": 90,
+    "real_time_updates": true
+  }
 }
-Inventory API
-http
-GET /api/inventory
-GET /api/inventory/{product_id}
-POST /api/inventory/update
-Financial API
-http
-GET /api/financial/balance-sheet?period=monthly
-GET /api/financial/profit-loss?date_from=2024-01-01&date_to=2024-01-31
-Webhooks
-POST /api/webhooks/inventory-update - Real-time inventory changes
+MT5 Connection Setup
+Navigate to Configuration Page
 
-POST /api/webhooks/sales-update - Sales transaction notifications
+Access via the sidebar menu
 
-📊 Reports & Exports
-Available Reports
-Sales Reports: Daily, weekly, monthly sales summaries
+Enter your MT5 account details:
 
-Inventory Reports: Stock levels, movement, valuation
+Server name
 
-Financial Statements: Balance sheet, P&L, cash flow
+Account number
 
-Customer Analytics: Purchase history, credit status
+Password
 
-Product Performance: Top sellers, profit margins
+Terminal path (optional)
 
-Export Formats
-PDF: Professional formatted reports
+Test Connection
 
-Excel: Raw data with pivot tables
+Use the built-in connection tester
 
-CSV: Machine-readable format
+Automatic fallback to demo mode if connection fails
 
-ZIP: Complete report packages
+Auto-Sync Settings
+
+Configure synchronization interval (default: 5 minutes)
+
+Set days of history to import
+
+Enable real-time updates
+
+📖 Usage Guide
+Dashboard
+Real-time Overview: Account balance, equity, margin, and open positions
+
+Performance Metrics: Key statistics and performance indicators
+
+Calendar View: Monthly P&L tracking with daily breakdowns
+
+Quick Actions: Fast access to key features
+
+Trade Journal
+Complete Trade History: All trades with detailed metrics
+
+Advanced Filtering: Filter by symbol, status, date range
+
+Trade Analysis: Risk-reward ratios, duration, and performance metrics
+
+Notes & Comments: Add insights and lessons learned
+
+Risk Analysis
+Risk Scoring: Overall risk assessment (0-100 scale)
+
+Drawdown Analysis: Visualize equity curve and drawdown periods
+
+Concentration Risk: Identify overexposure to specific symbols
+
+Recommendations: Actionable risk management advice
+
+Trade Planning
+Pre-trade Analysis: Plan trades with entry/exit conditions
+
+Strategy Definition: Define trading strategies and setups
+
+Risk Parameters: Set stop-loss, take-profit, and position size
+
+Outcome Tracking: Record actual vs planned results
+
+AI Q&A System
+Ask Questions: Natural language queries about your trading
+
+Performance Analysis: Get insights on win rate, patterns, and improvements
+
+Market Context: Analysis based on current market conditions
+
+Psychology Support: Emotional state analysis and recommendations
+
+🔧 API Endpoints
+The application provides RESTful API endpoints for advanced integration:
+
+Data Synchronization
+GET /api/sync_now - Manual synchronization trigger
+
+GET /api/sync_status - Current synchronization status
+
+Analytics & Statistics
+GET /api/stats/<period> - Trading statistics for specified period
+
+GET /api/equity_curve - Equity curve data for charts
+
+GET /api/trade_results_data - Trade results with filtering
+
+GET /api/calendar/<year>/<month> - Calendar P&L data
+
+Export & Reporting
+GET /export/csv - Export trades to CSV
+
+GET /export/pdf - Generate PDF report (requires ReportLab)
+
+AI & Advanced Features
+POST /api/ai/coach_advice - AI trading coach recommendations
+
+POST /api/ai/risk_assessment - AI-powered risk analysis
+
+POST /api/ai/market_analysis - Context-aware market analysis
+
+🗂 Database Schema
+The application uses SQLite with an advanced schema including:
+
+Core Tables
+trades: Complete trade history with 30+ metrics
+
+users: User authentication and preferences
+
+account_history: Equity curve and balance tracking
+
+calendar_pnl: Daily performance metrics
+
+trade_plans: Pre-trade planning and analysis
+
+psychology_logs: Emotional state and mindset tracking
+
+Advanced Indexing
+Optimized indexes for performance
+
+Automatic database backups
+
+Data integrity constraints
+
+🎯 Advanced Features
+Universal MT5 Adaptability
+Auto-detection: Works with any MT5 broker
+
+Flexible Configuration: No hard-coded broker settings
+
+Error Handling: Graceful fallback to demo mode
+
+Reconnection Logic: Automatic recovery from disconnections
+
+Real-time Processing
+WebSocket Integration: Live data updates
+
+Background Synchronization: Non-blocking data imports
+
+Auto-backup: Scheduled database backups
+
+Performance Optimization: Efficient data processing
+
+Professional Calculations
+Risk-Reward Analysis: Advanced R:R ratio calculations
+
+Position Sizing: Kelly Criterion and risk-based sizing
+
+Performance Metrics: Sharpe ratio, recovery factor, expectancy
+
+Statistical Analysis: Win streaks, consistency scoring
 
 🔒 Security Features
-Access Control
-Role-based permissions (Admin, Manager, Sales)
+User Authentication: Secure login system
 
-Session management with timeout
+Password Hashing: Bcrypt password protection
 
-Failed login attempt limiting
+CSRF Protection: Form security
 
-Password policy enforcement
+Session Management: Secure session handling
 
-Data Protection
-SQL injection prevention
+Input Validation: Comprehensive data validation
 
-XSS protection
-
-CSRF tokens on all forms
-
-Data encryption at rest
-
-Secure file upload validation
-
-Audit & Compliance
-Complete transaction audit trail
-
-User activity logging
-
-Financial data integrity checks
-
-Automated backup and recovery
-
-🚨 Troubleshooting
+🐛 Troubleshooting
 Common Issues
-Database Connection Errors
+MT5 Connection Failed
 
-Verify database file permissions
+Verify MT5 is installed and running
 
-Check disk space availability
+Check account credentials in configuration
 
-Ensure no other process is using the database
+Ensure firewall allows MT5 connections
+
+Database Errors
+
+Application automatically creates backup and recovery
+
+Check write permissions in application directory
 
 Performance Issues
 
-Clear browser cache
+Reduce synchronization interval
+
+Limit historical data import days
 
 Check system resources
 
-Review database indexes
+Demo Mode
+The application runs fully functional in demo mode when:
 
-Export Generation Failures
+MT5 is not installed
 
-Verify write permissions in exports directory
+Connection credentials are invalid
 
-Check available disk space
+MT5 is not running
 
-Ensure required libraries are installed
+Demo mode provides sample data with realistic trading patterns.
 
-Support Resources
-Application logs: logs/app.log
+📊 System Requirements
+Minimum
+Python 3.8+
 
-Health check: /health
+2GB RAM
 
-System metrics: /metrics
+100MB disk space
 
-Database status: /test-db
+Modern web browser
 
-📈 Monitoring & Maintenance
-Health Checks
+Recommended
+Python 3.10+
+
+4GB RAM
+
+500MB disk space (for extensive trade history)
+
+MT5 installation for live trading
+
+🚀 Deployment
+Development
 bash
-# Application health
-curl http://localhost:5001/health
+python app.py
+Production Considerations
+Set debug: false in configuration
 
-# Database connectivity
-curl http://localhost:5001/test-db
+Use production web server (Gunicorn, uWSGI)
 
-# System metrics
-curl http://localhost:5001/metrics
-Regular Maintenance
-Daily: Verify backup completion
+Configure reverse proxy (Nginx, Apache)
 
-Weekly: Review system logs
+Enable HTTPS
 
-Monthly: Archive old data
+Regular database backups
 
-Quarterly: Update currency exchange rates
+Monitor system resources
 
-Backup Procedures
-bash
-# Manual backup
-python -c "from app import backup_database; backup_database()"
+📈 Performance Optimization
+Database Optimization
+Automatic indexing on key columns
 
-# Restore from backup
-python -c "from app import restore_database; restore_database('backup_file.json')"
-🤝 Support
-Documentation
-User Manual
+Query optimization for large datasets
 
-Administrator Guide
+Regular vacuum and maintenance
 
-API Reference
+Memory Management
+Efficient data caching
 
-Troubleshooting Guide
+Background processing
 
-Getting Help
-Check Application Logs: logs/app.log
+Automatic log rotation
 
-Review Documentation: Comprehensive guides available
+🤝 Contributing
+We welcome contributions to enhance the Professional MT5 Trading Journal:
 
-System Health: Use built-in health check endpoints
+Fork the repository
 
-Contact Support: support@yourcompany.com
+Create a feature branch
 
-Training Resources
-Video tutorials available in admin dashboard
+Implement improvements
 
-Interactive product tours for new users
+Add tests where applicable
 
-Sample data for practice and training
+Submit a pull request
 
-Role-specific quick start guides
+Areas for Contribution
+Additional analytics and metrics
+
+Enhanced visualization
+
+New export formats
+
+Integration with additional platforms
+
+Performance optimizations
 
 📄 License
-This software is proprietary and licensed. Unauthorized distribution, modification, or use is prohibited.
+This project is licensed for personal and commercial use. Please refer to the LICENSE file for detailed terms and conditions.
 
-License Features:
+🆘 Support
+For technical support and documentation:
 
-Perpetual use license
+Check the built-in help system
 
-Includes updates and security patches
+Review configuration examples
 
-Professional support included
+Use the debug tools in the application
 
-Customization services available
+<div align="center">
+Professional MT5 Trading Journal v2.0
+Transforming Trading Data into Trading Intelligence
 
-For licensing inquiries: sales@yourcompany.com
-
-🗺️ Roadmap
-Upcoming Features
-Q2 2024: Mobile application release
-
-Q3 2024: Advanced predictive analytics
-
-Q4 2024: Integration with popular e-commerce platforms
-
-Q1 2025: Multi-language support
-
-Version History
-v2.0.0 (Current): IFRS compliance, multi-currency, advanced analytics
-
-v1.5.0: Warehouse transfers, barcode support, enhanced reporting
-
-v1.0.0: Initial release with core inventory and accounting features
-
-System Requirements Update: Ensure your environment meets the minimum specifications for optimal performance. Regular updates are recommended for security and feature enhancements.
-
-Last Updated: January 2024
-Copyright © 2024quantum-nexus Technologies All rights reserved.
-
+</div>
