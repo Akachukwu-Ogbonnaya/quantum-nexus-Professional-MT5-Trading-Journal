@@ -1957,7 +1957,7 @@ class TradePlanForm(FlaskForm):
                           render_kw={"class": "form-control"})
 
 
-# ======== D# ======== DATABASE INITIALIZATION FUNCTION ========
+#  ======== DATABASE INITIALIZATION FUNCTION ========
 # def init_trade_plans_table():
 #     """Initialize or update trade_plans table with required columns"""
 #     conn = sqlite3.connect(DB_PATH)
@@ -2023,6 +2023,10 @@ class TradePlanForm(FlaskForm):
 # init_trade_plans_table()
 
 
+'''
+# ======== PROFESSIONAL POSTGRESQL INITIALIZATION ========
+initialize_application()
+
 # ======== EMERGENCY DATABASE RESET ========
 def reset_trade_plans_table():
     """COMPLETELY RESET the trade_plans table with correct schema"""
@@ -2065,7 +2069,7 @@ def reset_trade_plans_table():
 
 # 🚨 RUN THIS ONCE TO FIX THE DATABASE 🚨
 reset_trade_plans_table()
-
+'''
 
 # =============================================================================
 # SYNC API ROUTES
