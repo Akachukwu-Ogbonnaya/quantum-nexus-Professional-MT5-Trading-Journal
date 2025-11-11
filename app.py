@@ -5450,6 +5450,33 @@ def on_professional_calendar_request(data):
         emit('calendar_error', {'error': str(e)})
 
 # -----------------------------------------------------------------------------
+# PROFESSIONAL APPLICATION INITIALIZATION
+# -----------------------------------------------------------------------------
+def initialize_application():
+    """Professional application initialization with environment awareness"""
+    try:
+        # Initialize PostgreSQL database (always runs)
+        init_database()
+        
+        # Conditionally run reset based on environment
+        if should_reset_database():
+            print("🔄 Development/Reset mode: Initializing trade plans table")
+            reset_trade_plans_table_postgres()  # Your PostgreSQL version
+        else:
+            print("✅ Production mode: Using existing database schema")
+            
+    except Exception as e:
+        print(f"⚠️ Application initialization warning: {e}")
+        # Don't crash - continue in degraded mode
+        print("🟡 Continuing with basic functionality")
+
+def should_reset_database():
+    """Determine if database reset should occur based on environment"""
+    return (os.environ.get('FLASK_ENV') == 'development' or 
+            os.environ.get('RESET_DB') == 'true' or
+            os.environ.get('RAILWAY_ENVIRONMENT') == 'development')
+
+# -----------------------------------------------------------------------------
 # PROFESSIONAL SHUTDOWN HANDLER
 # -----------------------------------------------------------------------------
 def professional_shutdown_handler():
@@ -5493,6 +5520,9 @@ if __name__ == "__main__":
         os.makedirs(directory, exist_ok=True)
 
     try:
+        # PROFESSIONAL DATABASE INITIALIZATION - ADD THIS LINE
+        initialize_application()
+
         # Initial professional sync
         threading.Thread(target=data_synchronizer.sync_with_mt5, daemon=True).start()
 
