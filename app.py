@@ -19,9 +19,13 @@ import calendar
 from datetime import datetime, timedelta, date
 from decimal import Decimal, InvalidOperation
 
-# Database imports
-import psycopg2
-from psycopg2.extras import RealDictCursor
+# Database imports (UPDATED ✅)
+import psycopg
+from psycopg.rows import dict_row
+# Helper to mimic RealDictCursor behavior
+def cursor_with_dict(conn):
+    return conn.cursor(row_factory=dict_row)
+
 import sqlite3  # Keep for potential fallback or local development
 
 # Flask imports
@@ -46,6 +50,7 @@ from logging.handlers import RotatingFileHandler
 
 # SocketIO imports
 from flask_socketio import SocketIO, emit
+
 
 # -----------------------------------------------------------------------------
 # SQLite3 Date Deprecation Fix for Python 3.12+
@@ -449,22 +454,22 @@ add_log('INFO', 'Professional MT5 Trading Journal Started', 'System')
 # -----------------------------------------------------------------------------
 
 def get_db_connection():
-    """Get PostgreSQL database connection"""
+    """Get PostgreSQL database connection using psycopg3"""
     database_url = os.environ.get('DATABASE_URL')
     if database_url:
         # Fix common URL format issue
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
-        conn = psycopg2.connect(database_url, cursor_factory=RealDictCursor)
+        conn = psycopg.connect(database_url, row_factory=dict_row)
     else:
         # Fallback for local development
-        conn = psycopg2.connect(
+        conn = psycopg.connect(
             host=os.environ.get('PGHOST'),
-            database=os.environ.get('PGDATABASE'),
+            dbname=os.environ.get('PGDATABASE'),
             user=os.environ.get('PGUSER'),
             password=os.environ.get('PGPASSWORD'),
             port=os.environ.get('PGPORT', 5432),
-            cursor_factory=RealDictCursor
+            row_factory=dict_row
         )
     return conn
 
