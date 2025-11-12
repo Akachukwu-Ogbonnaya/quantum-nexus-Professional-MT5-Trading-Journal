@@ -1219,7 +1219,7 @@ class CalendarDashboard:
         if date is None:
             date = datetime.now().date()
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         try:
             # Get trades for the specific date
             start_datetime = datetime.combine(date, datetime.min.time())
@@ -1298,7 +1298,7 @@ class CalendarDashboard:
     def get_monthly_calendar(year, month):
         """Get comprehensive monthly calendar data"""
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = get_db_connection()
 
             # Get calendar data for the month
             start_date = f"{year}-{month:02d}-01"
@@ -1746,7 +1746,7 @@ class ProfessionalDataSynchronizer:
 
     def update_database(self, trades, account_data):
         """Update database with professional error handling"""
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         try:
@@ -1960,7 +1960,7 @@ class TradePlanForm(FlaskForm):
 #  ======== DATABASE INITIALIZATION FUNCTION ========
 # def init_trade_plans_table():
 #     """Initialize or update trade_plans table with required columns"""
-#     conn = sqlite3.connect(DB_PATH)
+#     conn = get_db_connection()
 #     cursor = conn.cursor()
 #
 #     try:
@@ -2028,48 +2028,39 @@ class TradePlanForm(FlaskForm):
 initialize_application()
 
 # ======== EMERGENCY DATABASE RESET ========
-def reset_trade_plans_table():
-    """COMPLETELY RESET the trade_plans table with correct schema"""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
+def reset_trade_plans_table_postgres():
+    """Reset trade plans table using PostgreSQL"""
     try:
-        # Drop the corrupted table
-        cursor.execute("DROP TABLE IF EXISTS trade_plans")
-        print("🗑️  Dropped corrupted trade_plans table")
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-        # Create fresh table with CORRECT column names
+        # Drop and recreate table with PostgreSQL syntax
+        cursor.execute('DROP TABLE IF EXISTS trade_plans')
+        
         cursor.execute('''
             CREATE TABLE trade_plans (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                symbol TEXT NOT NULL,
-                strategy TEXT,
-                timeframe TEXT,
-                plan_date TEXT,
-                entry_conditions TEXT,  -- ✅ CORRECT: plural
-                exit_conditions TEXT,   -- ✅ CORRECT: plural  
+                id SERIAL PRIMARY KEY,
+                plan_date DATE NOT NULL,
+                symbol VARCHAR(50) NOT NULL,
+                strategy VARCHAR(100),
+                timeframe VARCHAR(20),
+                entry_conditions TEXT,
+                exit_conditions TEXT,
                 risk_percent REAL,
                 reward_percent REAL,
-                status TEXT DEFAULT 'pending',
-                outcome TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                status VARCHAR(20) DEFAULT 'pending',
+                outcome VARCHAR(20),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        print("✅ Created fresh trade_plans table with correct columns")
-
+        
         conn.commit()
-        print("🎉 Database reset completed successfully!")
-
-    except Exception as e:
-        print(f"❌ Error resetting database: {e}")
-        conn.rollback()
-    finally:
+        cursor.close()
         conn.close()
-
-
-# 🚨 RUN THIS ONCE TO FIX THE DATABASE 🚨
-reset_trade_plans_table()
-'''
+        print("✅ PostgreSQL trade_plans table reset successfully!")
+        
+    except Exception as e:
+        print(f"❌ Error resetting PostgreSQL trade plans table: {e}")
 
 # =============================================================================
 # SYNC API ROUTES
@@ -2085,7 +2076,7 @@ def api_sync_now():
 
         if success:
             # Get updated stats - FIXED: Convert int64 to regular int
-            conn = sqlite3.connect(DB_PATH)
+            conn = get_db_connection()
             trades_count = int(pd.read_sql('SELECT COUNT(*) as count FROM trades', conn).iloc[0]['count'])
             conn.close()
 
@@ -2113,7 +2104,7 @@ def api_sync_now():
 def api_sync_status():
     """Get current sync status"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         # FIXED: Convert int64 to regular int
         trades_count = int(pd.read_sql('SELECT COUNT(*) as count FROM trades', conn).iloc[0]['count'])
         open_positions = int(
@@ -2237,7 +2228,7 @@ def logout():
 def professional_dashboard():
     """Enhanced professional dashboard with safe dictionary handling"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
 
         # Get comprehensive statistics
         df = pd.read_sql('SELECT * FROM trades WHERE status = "CLOSED"', conn)
@@ -2286,7 +2277,7 @@ def statistics_dashboard():
     """Main statistics dashboard - leverages ALL existing statistical functions"""
     period = request.args.get('period', 'monthly')
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     try:
         # Get filtered data using existing functions
         df = get_trades_by_period(conn, period)
@@ -2399,7 +2390,7 @@ def calculate_strategy_performance(df):
 @login_required
 def journal():
     """Professional trade journal with advanced calculations"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     try:
         # Get pagination parameters
         page = request.args.get('page', 1, type=int)
@@ -2616,7 +2607,7 @@ def get_trade_status(trade):
 def psychology_log():
     """Trading Psychology Log Dashboard"""
     # Create psychology logs table if it doesn't exist
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS psychology_logs (
@@ -2647,7 +2638,7 @@ def psychology_log():
 def psychology_logs_api():
     """Psychology Logs API endpoint"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         if request.method == 'POST':
@@ -2723,7 +2714,7 @@ def psychology_logs_api():
 def psychology_stats():
     """Psychology Statistics API"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get emotion distribution
@@ -2784,7 +2775,7 @@ def quick_trade_plan():
 def update_trade_comment(ticket_id):
     """Update trade comment"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         data = request.get_json()
@@ -2813,7 +2804,7 @@ def update_trade_comment(ticket_id):
 def edit_trade(ticket_id):
     """Edit trade details"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         data = request.get_json()
@@ -2855,7 +2846,7 @@ def edit_trade(ticket_id):
 def duplicate_trade(ticket_id):
     """Duplicate an existing trade"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get original trade data
@@ -2911,7 +2902,7 @@ def trade_plan():
 
     if request.method == 'POST':
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = get_db_connection()
             cursor = conn.cursor()
 
             # Get data from HTML form fields
@@ -2959,7 +2950,7 @@ def trade_plan():
             conn.close()
 
     # Get existing trade plans with PROPER field mapping
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     try:
         # First, let's check if we need to migrate the database schema
         cursor = conn.cursor()
@@ -3057,7 +3048,7 @@ def trade_plan():
 def edit_trade_plan(plan_id):
     """Edit a trade plan"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Get form data
@@ -3121,7 +3112,7 @@ def edit_trade_plan(plan_id):
 def delete_trade_plan(plan_id):
     """Delete a trade plan"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute('DELETE FROM trade_plans WHERE id = ?', (plan_id,))
@@ -3457,7 +3448,7 @@ def get_mt5_error_message(error_code):
 def api_stats(period):
     """Professional API endpoint for trading statistics"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
 
         # Calculate date range based on period
         end_date = datetime.now()
@@ -3497,7 +3488,7 @@ def api_stats(period):
 def api_equity_curve():
     """Professional equity curve API"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         df = pd.read_sql('''
             SELECT timestamp, equity, balance 
             FROM account_history 
@@ -3548,7 +3539,7 @@ def api_trade_results_data():
     period = request.args.get('period', 'monthly')
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
 
         # Date filtering based on period
         end_date = datetime.now()
@@ -3593,7 +3584,7 @@ def api_calendar(year, month):
 def api_calendar_pnl():
     """Professional calendar PnL API"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         df = pd.read_sql('''
             SELECT date, daily_pnl, closed_trades, win_rate, winning_trades, losing_trades
             FROM calendar_pnl 
@@ -3620,7 +3611,7 @@ def api_logs():
 def api_profit_loss_distribution():
     """Professional P/L distribution API"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         df = pd.read_sql('SELECT profit FROM trades WHERE status = "CLOSED"', conn)
 
         if df.empty:
@@ -3651,7 +3642,7 @@ def api_profit_loss_distribution():
 def export_csv():
     """Professional CSV export"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         df = pd.read_sql('SELECT * FROM trades ORDER BY entry_time DESC', conn)
 
         if df.empty:
@@ -3709,7 +3700,7 @@ def export_pdf():
         elements.append(Spacer(1, 20))
 
         # Get data for report
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         df = pd.read_sql('SELECT * FROM trades WHERE status = "CLOSED"', conn)
 
         if not df.empty:
@@ -3776,7 +3767,7 @@ def risk_analysis():
     is_demo_mode = not get_mt5_connection_status()
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         df = get_trades_by_period(conn, period)
 
         if df.empty:
@@ -3876,7 +3867,7 @@ def trend_analysis():
 
     conn = None  # Initialize connection
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         df = get_trades_by_period(conn, period)
 
         if df.empty:
@@ -4679,7 +4670,7 @@ def ai_qa():
 def api_ai_user_stats():
     """Get comprehensive user statistics for AI analysis"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
 
         # Get trading statistics
         df = pd.read_sql('SELECT * FROM trades WHERE status = "CLOSED"', conn)
@@ -4734,7 +4725,7 @@ def api_ai_user_stats():
 def api_ai_trade_analysis(trade_id):
     """Get specific trade data for AI analysis"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
 
         # Get the specific trade
         trade_df = pd.read_sql(
@@ -4781,7 +4772,7 @@ def api_ai_coach_advice():
         timeframe = data.get('timeframe', 'weekly')
 
         # Get comprehensive user data
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
 
         # Calculate date range based on timeframe
         end_date = datetime.now()
@@ -4838,7 +4829,7 @@ def api_ai_coach_advice():
 def api_ai_risk_assessment():
     """Get AI-powered risk assessment"""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
 
         # Get recent trades for risk analysis
         recent_trades = pd.read_sql('''
@@ -4883,7 +4874,7 @@ def api_ai_market_analysis():
         analysis_type = data.get('type', 'intraday')
 
         # Get user's trading preferences and history
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
 
         # Get most traded symbols
         symbol_stats = pd.read_sql('''
@@ -4939,7 +4930,7 @@ def api_ai_psychology_analysis():
         mood_data = data.get('mood_data', {})
 
         # Get psychology logs if available
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
 
         psychology_logs = []
         try:
@@ -4996,7 +4987,7 @@ def api_ai_custom_question():
             return jsonify({'error': 'Question is required'}), 400
 
         # Get comprehensive user context
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
 
         # Get relevant data based on question category
         context_data = get_question_context(conn, category, question)
@@ -5459,13 +5450,13 @@ def on_professional_calendar_request(data):
 def initialize_application():
     """Professional application initialization with environment awareness"""
     try:
-        # Initialize PostgreSQL database (always runs)
+        # Initialize PostgreSQL database
         init_database()
         
         # Conditionally run reset based on environment
         if should_reset_database():
             print("🔄 Development/Reset mode: Initializing trade plans table")
-            reset_trade_plans_table_postgres()  # Your PostgreSQL version
+            reset_trade_plans_table_postgres()
         else:
             print("✅ Production mode: Using existing database schema")
             
@@ -5473,12 +5464,6 @@ def initialize_application():
         print(f"⚠️ Application initialization warning: {e}")
         # Don't crash - continue in degraded mode
         print("🟡 Continuing with basic functionality")
-
-def should_reset_database():
-    """Determine if database reset should occur based on environment"""
-    return (os.environ.get('FLASK_ENV') == 'development' or 
-            os.environ.get('RESET_DB') == 'true' or
-            os.environ.get('RAILWAY_ENVIRONMENT') == 'development')
 
 # -----------------------------------------------------------------------------
 # PROFESSIONAL SHUTDOWN HANDLER
