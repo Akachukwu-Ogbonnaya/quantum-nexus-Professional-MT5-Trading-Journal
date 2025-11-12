@@ -2952,11 +2952,8 @@ class TradePlanForm(FlaskForm):
 # # Initialize the table when app starts
 # init_trade_plans_table()
 
-
 '''
 # ======== PROFESSIONAL POSTGRESQL INITIALIZATION ========
-initialize_application()
-
 # ======== EMERGENCY DATABASE RESET ========
 def reset_trade_plans_table():
     """Reset trade_plans table for PostgreSQL or SQLite"""
@@ -3002,13 +2999,13 @@ def reset_trade_plans_table():
             ''')
 
         conn.commit()
-        cursor.close()
-        conn.close()
-
-        print("✅ Trade plans table reset successfully!")
+        print("✅ trade_plans table reset successfully!")
 
     except Exception as e:
-        print(f"❌ Error resetting trade plans table: {e}")
+        print(f"❌ Error resetting trade_plans table: {e}")
+    finally:
+        conn.close()
+
 
 
 # =============================================================================
