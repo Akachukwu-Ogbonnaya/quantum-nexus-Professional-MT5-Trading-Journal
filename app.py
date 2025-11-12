@@ -5,7 +5,7 @@ COMPLETE PROFESSIONAL MT5 TRADING JOURNAL
 - Real-time synchronization
 - Professional UI/UX design
 - Comprehensive error handling
-- PostgreSQL database support
+- PostgreSQL + SQLite hybrid database support
 """
 
 import os
@@ -19,37 +19,75 @@ import calendar
 from datetime import datetime, timedelta, date
 from decimal import Decimal, InvalidOperation
 
-# Database imports (UPDATED ✅)
-import psycopg
-from psycopg.rows import dict_row
-# Helper to mimic RealDictCursor behavior
-def cursor_with_dict(conn):
-    return conn.cursor(row_factory=dict_row)
+# -----------------------------------------------------------------------------
+# DATABASE MODE SELECTION
+# -----------------------------------------------------------------------------
+USE_POSTGRES = os.getenv("USE_POSTGRES", "false").lower() == "true"
 
-import sqlite3  # Keep for potential fallback or local development
+if USE_POSTGRES:
+    # PostgreSQL mode (for deployment / Render)
+    import psycopg
+    from psycopg.rows import dict_row
 
-# Flask imports
-from flask import (Flask, render_template, request, redirect, url_for, session,
-                   jsonify, send_file, abort, flash, Response)
+    def cursor_with_dict(conn):
+        """Return PostgreSQL dict-style cursor"""
+        return conn.cursor(row_factory=dict_row)
+
+    print("✅ PostgreSQL mode activated")
+else:
+    # SQLite fallback mode (for desktop/offline users)
+    import sqlite3
+
+    def cursor_with_dict(conn):
+        """Return SQLite cursor with tuple access"""
+        return conn.cursor()
+
+    print("💾 SQLite mode activated (desktop/local mode)")
+
+# -----------------------------------------------------------------------------
+# FLASK CORE IMPORTS
+# -----------------------------------------------------------------------------
+from flask import (
+    Flask, render_template, request, redirect, url_for, session,
+    jsonify, send_file, abort, flash, Response
+)
 from flask_session import Session
 from flask_wtf import CSRFProtect
-from flask_login import LoginManager, login_user, login_required, logout_user, current_user, UserMixin
+from flask_login import (
+    LoginManager, login_user, login_required,
+    logout_user, current_user, UserMixin
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SelectField, TextAreaField, FloatField
+from wtforms import (
+    StringField, PasswordField, SelectField, TextAreaField, FloatField
+)
 from wtforms.fields import DateField
 from wtforms.validators import DataRequired, Optional
 
-# Data analysis imports
+# -----------------------------------------------------------------------------
+# DATA ANALYSIS + LOGGING + SOCKETIO
+# -----------------------------------------------------------------------------
 import pandas as pd
 import numpy as np
-
-# Logging imports
 import logging
 from logging.handlers import RotatingFileHandler
-
-# SocketIO imports
 from flask_socketio import SocketIO, emit
+def get_db_connection():
+    """Return a connection to the correct database based on environment"""
+    if USE_POSTGRES:
+        return psycopg.connect(
+            dbname=os.getenv("POSTGRES_DB", "quantum_journal_db"),
+            user=os.getenv("POSTGRES_USER", "quantum_user"),
+            password=os.getenv("POSTGRES_PASSWORD", "quantum_pass"),
+            host=os.getenv("POSTGRES_HOST", "localhost"),
+            port=os.getenv("POSTGRES_PORT", "5432")
+        )
+    else:
+        db_path = os.path.join(os.getcwd(), "database", "quantum_journal.db")
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        return sqlite3.connect(db_path)
+
 
 
 # -----------------------------------------------------------------------------
@@ -2028,39 +2066,59 @@ class TradePlanForm(FlaskForm):
 initialize_application()
 
 # ======== EMERGENCY DATABASE RESET ========
-def reset_trade_plans_table_postgres():
-    """Reset trade plans table using PostgreSQL"""
+def reset_trade_plans_table():
+    """Reset trade_plans table for PostgreSQL or SQLite"""
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = cursor_with_dict(conn)
 
-        # Drop and recreate table with PostgreSQL syntax
         cursor.execute('DROP TABLE IF EXISTS trade_plans')
-        
-        cursor.execute('''
-            CREATE TABLE trade_plans (
-                id SERIAL PRIMARY KEY,
-                plan_date DATE NOT NULL,
-                symbol VARCHAR(50) NOT NULL,
-                strategy VARCHAR(100),
-                timeframe VARCHAR(20),
-                entry_conditions TEXT,
-                exit_conditions TEXT,
-                risk_percent REAL,
-                reward_percent REAL,
-                status VARCHAR(20) DEFAULT 'pending',
-                outcome VARCHAR(20),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
+
+        if USE_POSTGRES:
+            cursor.execute('''
+                CREATE TABLE trade_plans (
+                    id SERIAL PRIMARY KEY,
+                    plan_date DATE NOT NULL,
+                    symbol VARCHAR(50) NOT NULL,
+                    strategy VARCHAR(100),
+                    timeframe VARCHAR(20),
+                    entry_conditions TEXT,
+                    exit_conditions TEXT,
+                    risk_percent REAL,
+                    reward_percent REAL,
+                    status VARCHAR(20) DEFAULT 'pending',
+                    outcome VARCHAR(20),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+        else:
+            cursor.execute('''
+                CREATE TABLE trade_plans (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    plan_date TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    strategy TEXT,
+                    timeframe TEXT,
+                    entry_conditions TEXT,
+                    exit_conditions TEXT,
+                    risk_percent REAL,
+                    reward_percent REAL,
+                    status TEXT DEFAULT 'pending',
+                    outcome TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
         conn.commit()
         cursor.close()
         conn.close()
-        print("✅ PostgreSQL trade_plans table reset successfully!")
-        
+
+        print("✅ Trade plans table reset successfully!")
+
     except Exception as e:
-        print(f"❌ Error resetting PostgreSQL trade plans table: {e}")
+        print(f"❌ Error resetting trade plans table: {e}")
+
+
 
 # =============================================================================
 # SYNC API ROUTES
@@ -5449,21 +5507,11 @@ def on_professional_calendar_request(data):
 # -----------------------------------------------------------------------------
 def initialize_application():
     """Professional application initialization with environment awareness"""
-    try:
-        # Initialize PostgreSQL database
-        init_database()
-        
-        # Conditionally run reset based on environment
-        if should_reset_database():
-            print("🔄 Development/Reset mode: Initializing trade plans table")
-            reset_trade_plans_table_postgres()
-        else:
-            print("✅ Production mode: Using existing database schema")
-            
-    except Exception as e:
-        print(f"⚠️ Application initialization warning: {e}")
-        # Don't crash - continue in degraded mode
-        print("🟡 Continuing with basic functionality")
+    if should_reset_database():
+        print("🔄 Development/Reset mode: Initializing trade plans table")
+        reset_trade_plans_table()  # <- universal function
+    else:
+        print("✅ Production mode: Using existing database schema")
 
 # -----------------------------------------------------------------------------
 # PROFESSIONAL SHUTDOWN HANDLER
