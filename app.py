@@ -88,7 +88,220 @@ def get_db_connection():
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         return sqlite3.connect(db_path)
 
+# =============================================================================
+# PROFESSIONAL LICENSE MANAGEMENT SYSTEM
+# =============================================================================
+import hashlib
+import uuid
+import platform
+import socket
+import subprocess
+from datetime import datetime, timedelta
 
+class LicenseManager:
+    def __init__(self):
+        self.license_file = self.get_license_file_path()
+        self.license_data = self.load_license()
+        self.trial_days = 30  # 30-day free trial
+        
+    def get_license_file_path(self):
+        """Get license file path based on OS"""
+        system = platform.system().lower()
+        
+        if system == "windows":
+            license_dir = os.path.join(os.environ.get('APPDATA', ''), 'MT5Journal', 'license')
+        elif system == "darwin":  # macOS
+            license_dir = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'MT5Journal')
+        else:  # Linux and other Unix-like
+            license_dir = os.path.join(os.path.expanduser('~'), '.config', 'mt5journal', 'license')
+        
+        os.makedirs(license_dir, exist_ok=True)
+        return os.path.join(license_dir, 'license.lic')
+    
+    def get_system_fingerprint(self):
+        """Generate unique system fingerprint"""
+        try:
+            # Get system information
+            system_info = {
+                'machine': platform.machine(),
+                'processor': platform.processor(),
+                'system': platform.system(),
+                'node': platform.node(),
+                'mac_address': self.get_mac_address()
+            }
+            
+            # Create hash from system info
+            fingerprint_str = ''.join(str(v) for v in system_info.values())
+            return hashlib.sha256(fingerprint_str.encode()).hexdigest()[:32]
+            
+        except Exception as e:
+            # Fallback to random UUID if system info unavailable
+            return str(uuid.uuid4())
+    
+    def get_mac_address(self):
+        """Get MAC address for system identification"""
+        try:
+            mac = uuid.getnode()
+            return ':'.join(('%012X' % mac)[i:i+2] for i in range(0, 12, 2))
+        except:
+            return "00:00:00:00:00:00"
+    
+    def load_license(self):
+        """Load license data from file"""
+        default_license = {
+            'status': 'trial',
+            'created_date': datetime.now().isoformat(),
+            'expiry_date': (datetime.now() + timedelta(days=self.trial_days)).isoformat(),
+            'license_key': '',
+            'system_fingerprint': self.get_system_fingerprint(),
+            'activations': 0,
+            'max_activations': 1,
+            'features': ['basic_trading_journal', 'risk_analysis', 'trade_analytics']
+        }
+        
+        try:
+            if os.path.exists(self.license_file):
+                with open(self.license_file, 'r') as f:
+                    license_data = json.load(f)
+                    # Validate license integrity
+                    if self.validate_license_integrity(license_data):
+                        return license_data
+                    else:
+                        add_log('WARNING', 'License file tampered with, resetting to trial', 'License')
+                        return default_license
+            else:
+                # Create initial trial license
+                self.save_license(default_license)
+                return default_license
+                
+        except Exception as e:
+            add_log('ERROR', f'License loading error: {e}', 'License')
+            return default_license
+    
+    def save_license(self, license_data):
+        """Save license data to file"""
+        try:
+            with open(self.license_file, 'w') as f:
+                json.dump(license_data, f, indent=2)
+            return True
+        except Exception as e:
+            add_log('ERROR', f'License saving error: {e}', 'License')
+            return False
+    
+    def validate_license_integrity(self, license_data):
+        """Validate license hasn't been tampered with"""
+        try:
+            required_fields = ['status', 'created_date', 'system_fingerprint']
+            if not all(field in license_data for field in required_fields):
+                return False
+            
+            # Check if system fingerprint matches
+            current_fingerprint = self.get_system_fingerprint()
+            if license_data.get('system_fingerprint') != current_fingerprint:
+                add_log('WARNING', 'System fingerprint changed - possible license violation', 'License')
+                return False
+                
+            return True
+        except:
+            return False
+    
+    def validate_license(self):
+        """Validate current license status"""
+        try:
+            # Check if trial expired
+            if self.license_data['status'] == 'trial':
+                expiry_date = datetime.fromisoformat(self.license_data['expiry_date'])
+                if datetime.now() > expiry_date:
+                    self.license_data['status'] = 'expired'
+                    self.save_license(self.license_data)
+                    return False, "Trial period has expired"
+                return True, f"Trial active - {self.get_trial_days_left()} days remaining"
+            
+            # Check if licensed
+            elif self.license_data['status'] == 'licensed':
+                # Validate license key
+                if self.validate_license_key(self.license_data['license_key']):
+                    return True, "License active"
+                else:
+                    return False, "Invalid license key"
+            
+            elif self.license_data['status'] == 'expired':
+                return False, "License has expired"
+                
+            else:
+                return False, "Invalid license status"
+                
+        except Exception as e:
+            add_log('ERROR', f'License validation error: {e}', 'License')
+            return False, "License validation error"
+    
+    def get_trial_days_left(self):
+        """Get remaining trial days"""
+        try:
+            expiry_date = datetime.fromisoformat(self.license_data['expiry_date'])
+            days_left = (expiry_date - datetime.now()).days
+            return max(0, days_left)
+        except:
+            return 0
+    
+    def validate_license_key(self, license_key):
+        """Validate license key format and signature"""
+        try:
+            if not license_key or len(license_key) != 29:
+                return False
+            
+            # Simple validation - in production use proper cryptographic validation
+            parts = license_key.split('-')
+            if len(parts) != 4 or not all(len(part) == 7 for part in parts):
+                return False
+                
+            return True
+        except:
+            return False
+    
+    def activate_license(self, license_key):
+        """Activate a license key"""
+        try:
+            if self.validate_license_key(license_key):
+                self.license_data.update({
+                    'status': 'licensed',
+                    'license_key': license_key,
+                    'activation_date': datetime.now().isoformat(),
+                    'activations': self.license_data.get('activations', 0) + 1,
+                    'features': ['full_trading_journal', 'advanced_analytics', 'ai_coaching', 'priority_support']
+                })
+                
+                if self.save_license(self.license_data):
+                    add_log('INFO', f'License activated successfully: {license_key}', 'License')
+                    return True, "License activated successfully!"
+                else:
+                    return False, "Failed to save license"
+            else:
+                return False, "Invalid license key format"
+                
+        except Exception as e:
+            add_log('ERROR', f'License activation error: {e}', 'License')
+            return False, f"Activation error: {str(e)}"
+    
+    def get_license_info(self):
+        """Get comprehensive license information"""
+        is_valid, message = self.validate_license()
+        
+        return {
+            'status': self.license_data['status'],
+            'is_valid': is_valid,
+            'message': message,
+            'trial_days_left': self.get_trial_days_left(),
+            'features': self.license_data.get('features', []),
+            'created_date': self.license_data.get('created_date'),
+            'expiry_date': self.license_data.get('expiry_date'),
+            'activations': self.license_data.get('activations', 0),
+            'max_activations': self.license_data.get('max_activations', 1),
+            'system_fingerprint': self.license_data.get('system_fingerprint')[:8] + '...'  # Partial for security
+        }
+
+# Initialize license manager
+license_manager = LicenseManager()
 
 # -----------------------------------------------------------------------------
 # SQLite3 Date Deprecation Fix for Python 3.12+
@@ -388,6 +601,206 @@ class UniversalMT5Manager:
 
 # Initialize MT5 Manager
 mt5_manager = UniversalMT5Manager()
+
+# Initialize MT5 Manager
+mt5_manager = UniversalMT5Manager()
+
+# =============================================================================
+# HYBRID DATABASE UTILITY FUNCTIONS
+# =============================================================================
+
+def get_universal_connection():
+    """Universal connection that works for both PostgreSQL and SQLite"""
+    return db_manager.get_connection()
+
+def universal_execute(cursor, query, params=None):
+    """Execute query with universal parameter style"""
+    # Get database type from cursor or connection
+    db_type = getattr(cursor, 'db_type', None)
+    if not db_type and hasattr(cursor, 'connection'):
+        db_type = getattr(cursor.connection, 'db_type', 'sqlite')
+    
+    # Convert parameter style if needed
+    if db_type == 'postgresql' and '?' in query:
+        query = query.replace('?', '%s')
+    
+    if params:
+        cursor.execute(query, params)
+    else:
+        cursor.execute(query)
+
+def conn_fetch_dataframe(conn, query, params=None):
+    """Universal dataframe fetch for both databases"""
+    try:
+        if params:
+            return pd.read_sql_query(query, conn, params=params)
+        else:
+            return pd.read_sql_query(query, conn)
+    except Exception as e:
+        print(f"Dataframe fetch error: {e}")
+        return pd.DataFrame()
+
+def detect_environment():
+    """Enhanced environment detection for hybrid mode"""
+    # Web environment indicators
+    web_indicators = [
+        'DATABASE_URL' in os.environ,
+        'RAILWAY_ENVIRONMENT' in os.environ,
+        'HEROKU' in os.environ,
+        'RENDER' in os.environ,
+        'FLY_APP_NAME' in os.environ,
+        any('pythonanywhere' in key.lower() for key in os.environ.keys())
+    ]
+    
+    if any(web_indicators):
+        return 'postgresql'
+    else:
+        return 'sqlite'
+
+def get_demo_risk_recommendations():
+    """Demo risk recommendations"""
+    return [
+        {
+            'category': 'Position Sizing',
+            'message': 'Consider reducing position sizes by 25% to manage volatility',
+            'priority': 'medium'
+        },
+        {
+            'category': 'Diversification', 
+            'message': 'Diversify across more symbols to reduce concentration risk',
+            'priority': 'medium'
+        }
+    ]
+
+def get_demo_detailed_risk_metrics():
+    """Demo detailed risk metrics"""
+    return [
+        {
+            'name': 'Max Drawdown',
+            'value': '15.5%',
+            'benchmark': '< 10%', 
+            'status': 'Good',
+            'description': 'Maximum peak-to-trough decline in equity'
+        },
+        {
+            'name': 'Sharpe Ratio',
+            'value': '1.2',
+            'benchmark': '> 1.0',
+            'status': 'Excellent',
+            'description': 'Risk-adjusted return metric'
+        }
+    ]
+
+def get_demo_risk_chart_data():
+    """Demo risk chart data"""
+    return {
+        'labels': ['Trade 1', 'Trade 2', 'Trade 3', 'Trade 4', 'Trade 5'],
+        'risk_values': [2.5, 3.1, 1.8, 4.2, 2.9]
+    }
+
+def get_demo_drawdown_chart_data():
+    """Demo drawdown chart data"""
+    return {
+        'dates': ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
+        'drawdowns': [0, 2.5, 1.8, 4.2, 3.1]
+    }
+
+def get_demo_concentration_chart_data():
+    """Demo concentration chart data"""
+    return {
+        'labels': ['EURUSD', 'GBPUSD', 'XAUUSD', 'USDJPY', 'Others'],
+        'values': [35, 25, 20, 15, 5]
+    }
+
+class HybridErrorHandler:
+    """Handle errors differently for web vs desktop"""
+    
+    @staticmethod
+    def handle_database_error(error, context="Database operation"):
+        """Handle database errors appropriately for environment"""
+        environment = detect_environment()
+        
+        if environment == 'postgresql':
+            # For web: Log and return JSON error
+            add_log('ERROR', f'{context} failed: {error}', 'Database')
+            return {'success': False, 'error': 'Database operation failed'}
+        else:
+            # For desktop: Attempt recovery or use demo data
+            add_log('WARNING', f'{context} failed, using demo data: {error}', 'Database')
+            return {'success': True, 'demo_mode': True, 'message': 'Using demo data'}
+
+class DatabaseMigrator:
+    """Handle database migration between SQLite and PostgreSQL"""
+    
+    def __init__(self):
+        self.db_manager = db_manager
+    
+    def export_to_sqlite(self, postgres_conn, sqlite_path):
+        """Export from PostgreSQL to SQLite"""
+        try:
+            tables = ['trades', 'users', 'account_history', 'calendar_pnl', 'trade_plans', 'market_analysis']
+            
+            for table in tables:
+                # Read from PostgreSQL
+                df = pd.read_sql(f'SELECT * FROM {table}', postgres_conn)
+                
+                # Write to SQLite
+                with sqlite3.connect(sqlite_path) as sqlite_conn:
+                    df.to_sql(table, sqlite_conn, if_exists='replace', index=False)
+            
+            return True
+        except Exception as e:
+            add_log('ERROR', f'Export to SQLite failed: {e}', 'Migration')
+            return False
+
+import functools
+
+def hybrid_compatible(route_func):
+    """Decorator to make routes work in both web and desktop modes"""
+    @functools.wraps(route_func)
+    def wrapper(*args, **kwargs):
+        try:
+            return route_func(*args, **kwargs)
+        except Exception as e:
+            # Log the error
+            add_log('ERROR', f'Route {route_func.__name__} error: {e}', 'Hybrid')
+            
+            # Return appropriate response based on environment
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'error': 'Operation failed', 'demo_mode': True})
+            else:
+                flash('Operation completed in demo mode', 'info')
+                return redirect(request.referrer or url_for('professional_dashboard'))
+    return wrapper
+
+def initialize_hybrid_application():
+    """Initialize application for hybrid mode"""
+    environment = detect_environment()
+    
+    print(f"🚀 Starting Professional MT5 Journal in {environment.upper()} mode")
+    
+    # Initialize database
+    try:
+        init_database()
+        print("✅ Database initialized successfully")
+    except Exception as e:
+        print(f"⚠️ Database initialization warning: {e}")
+        # Continue in demo mode
+    
+    # Initialize MT5 connection based on environment
+    if environment == 'sqlite' and MT5_AVAILABLE:
+        print("🔗 Attempting MT5 connection for desktop mode...")
+        mt5_manager.initialize_connection()
+    else:
+        print("🌐 Web mode or MT5 unavailable - using demo data")
+        mt5_manager.initialize_demo_mode()
+    
+    print("✅ Hybrid application initialization complete")
+
+# Call the initialization
+initialize_hybrid_application()
+
+
 # -----------------------------------------------------------------------------
 # Flask Application Setup
 # -----------------------------------------------------------------------------
@@ -488,190 +901,450 @@ add_log = advanced_logger.add_log
 add_log('INFO', 'Professional MT5 Trading Journal Started', 'System')
 
 # -----------------------------------------------------------------------------
-# Database Setup with Advanced Schema (PostgreSQL Version)
+# HYBRID DATABASE MANAGER - AUTOMATIC ENVIRONMENT DETECTION
 # -----------------------------------------------------------------------------
+class HybridDatabaseManager:
+    def __init__(self):
+        self.db_type = self.detect_environment()
+        self.connection = None
+        print(f"🔍 Environment detected: {self.db_type.upper()} mode")
+    
+    def detect_environment(self):
+        """Auto-detect if running as web app or desktop app"""
+        # Web environment indicators
+        web_indicators = [
+            'DATABASE_URL' in os.environ,
+            'RAILWAY_ENVIRONMENT' in os.environ,
+            'HEROKU' in os.environ,
+            'RENDER' in os.environ,
+            any('pythonanywhere' in key.lower() for key in os.environ.keys())
+        ]
+        
+        if any(web_indicators):
+            return 'postgresql'
+        else:
+            return 'sqlite'
+    
+    def get_connection(self):
+        """Get appropriate database connection based on environment"""
+        if self.db_type == 'postgresql':
+            return self.get_postgresql_connection()
+        else:
+            return self.get_sqlite_connection()
+    
+    def get_postgresql_connection(self):
+        """Get PostgreSQL connection for web environment"""
+        try:
+            database_url = os.environ.get('DATABASE_URL')
+            if database_url and database_url.startswith('postgres://'):
+                database_url = database_url.replace('postgres://', 'postgresql://', 1)
+            
+            if database_url:
+                conn = psycopg.connect(database_url, row_factory=dict_row)
+                conn.db_type = 'postgresql'
+                return conn
+            else:
+                # Fallback to local PostgreSQL
+                conn = psycopg.connect(
+                    host=os.environ.get('PGHOST', 'localhost'),
+                    dbname=os.environ.get('PGDATABASE', 'mt5_journal'),
+                    user=os.environ.get('PGUSER', 'postgres'),
+                    password=os.environ.get('PGPASSWORD', ''),
+                    port=os.environ.get('PGPORT', 5432),
+                    row_factory=dict_row
+                )
+                conn.db_type = 'postgresql'
+                return conn
+        except Exception as e:
+            print(f"❌ PostgreSQL connection failed: {e}, falling back to SQLite")
+            return self.get_sqlite_connection()
+    
+    def get_sqlite_connection(self):
+        """Get SQLite connection for desktop environment"""
+        try:
+            # Define DB_PATH for SQLite
+            DB_PATH = config['database'].get('path', 'database/trades.db')
+            os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+            
+            # Connect with date adapters
+            conn = sqlite3.connect(DB_PATH, detect_types=sqlite3.PARSE_DECLTYPES)
+            conn.row_factory = sqlite3.Row
+            conn.db_type = 'sqlite'
+            
+            # Enable foreign keys and WAL mode for better performance
+            conn.execute('PRAGMA foreign_keys = ON')
+            conn.execute('PRAGMA journal_mode = WAL')
+            
+            return conn
+        except Exception as e:
+            print(f"❌ SQLite connection failed: {e}")
+            raise
+    
+    def execute_query(self, query, params=None):
+        """Execute query with appropriate parameter style for current database"""
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            # Convert parameter style if needed
+            if self.db_type == 'postgresql' and '?' in query:
+                query = query.replace('?', '%s')
+            
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            
+            if query.strip().upper().startswith('SELECT'):
+                result = cursor.fetchall()
+                # Convert to dict for consistency
+                if self.db_type == 'postgresql':
+                    return [dict(row) for row in result]
+                else:
+                    return [dict(row) for row in result]
+            else:
+                conn.commit()
+                return cursor.rowcount
+                
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            conn.close()
 
+# Initialize hybrid database manager
+db_manager = HybridDatabaseManager()
+
+# Universal connection function for backward compatibility
 def get_db_connection():
-    """Get PostgreSQL database connection using psycopg3"""
-    database_url = os.environ.get('DATABASE_URL')
-    if database_url:
-        # Fix common URL format issue
-        if database_url.startswith('postgres://'):
-            database_url = database_url.replace('postgres://', 'postgresql://', 1)
-        conn = psycopg.connect(database_url, row_factory=dict_row)
-    else:
-        # Fallback for local development
-        conn = psycopg.connect(
-            host=os.environ.get('PGHOST'),
-            dbname=os.environ.get('PGDATABASE'),
-            user=os.environ.get('PGUSER'),
-            password=os.environ.get('PGPASSWORD'),
-            port=os.environ.get('PGPORT', 5432),
-            row_factory=dict_row
-        )
-    return conn
+    """Universal database connection that works in both environments"""
+    return db_manager.get_connection()
 
+# Define DB_PATH for SQLite fallback (used in existing code)
+DB_PATH = config['database'].get('path', 'database/trades.db')
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+# -----------------------------------------------------------------------------
+# HYBRID DATABASE INITIALIZATION
+# -----------------------------------------------------------------------------
 def init_database():
-    """Initialize database with comprehensive schema (PostgreSQL)"""
-    conn = get_db_connection()
-    c = conn.cursor()
+    """Initialize database with hybrid schema compatibility"""
+    conn = db_manager.get_connection()
+    
+    try:
+        if conn.db_type == 'postgresql':
+            init_postgresql_schema(conn)
+        else:
+            init_sqlite_schema(conn)
+        
+        print(f"✅ {conn.db_type.upper()} database initialized successfully!")
+        
+    except Exception as e:
+        print(f"❌ Database initialization error: {e}")
+        raise
+    finally:
+        conn.close()
 
-    # Users table (PostgreSQL syntax)
-    c.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(80) UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        email VARCHAR(120),
-        preferences TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        last_login TIMESTAMP
-    )
+def init_postgresql_schema(conn):
+    """Initialize PostgreSQL schema"""
+    cursor = conn.cursor()
+    
+    # Users table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(80) UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            email VARCHAR(120),
+            preferences TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_login TIMESTAMP
+        )
     ''')
-
+    
     # Enhanced trades table (PostgreSQL syntax)
-    c.execute('''
-    CREATE TABLE IF NOT EXISTS trades (
-        id SERIAL PRIMARY KEY,
-        ticket_id INTEGER UNIQUE,
-        symbol VARCHAR(50) NOT NULL,
-        type VARCHAR(20) CHECK(type IN ('BUY', 'SELL', 'BUY_LIMIT', 'SELL_LIMIT', 'BUY_STOP', 'SELL_STOP')),
-        volume REAL NOT NULL,
-        entry_price REAL NOT NULL,
-        current_price REAL,
-        exit_price REAL,
-        sl_price REAL,
-        tp_price REAL,
-        entry_time TIMESTAMP NOT NULL,
-        exit_time TIMESTAMP,
-        profit REAL DEFAULT 0,
-        commission REAL DEFAULT 0,
-        swap REAL DEFAULT 0,
-        comment TEXT,
-        magic_number INTEGER,
-        session VARCHAR(50),
-        planned_rr REAL,
-        actual_rr REAL,
-        duration VARCHAR(50),
-        account_balance REAL,
-        account_equity REAL,
-        account_change_percent REAL,
-        status VARCHAR(20) CHECK(status IN ('OPEN', 'CLOSED', 'PENDING', 'CANCELLED')) DEFAULT 'OPEN',
-        floating_pnl REAL DEFAULT 0,
-        risk_per_trade REAL,
-        margin_used REAL,
-        strategy VARCHAR(100),
-        tags TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS trades (
+            id SERIAL PRIMARY KEY,
+            ticket_id INTEGER UNIQUE,
+            symbol VARCHAR(50) NOT NULL,
+            type VARCHAR(20) CHECK(type IN ('BUY', 'SELL', 'BUY_LIMIT', 'SELL_LIMIT', 'BUY_STOP', 'SELL_STOP')),
+            volume REAL NOT NULL,
+            entry_price REAL NOT NULL,
+            current_price REAL,
+            exit_price REAL,
+            sl_price REAL,
+            tp_price REAL,
+            entry_time TIMESTAMP NOT NULL,
+            exit_time TIMESTAMP,
+            profit REAL DEFAULT 0,
+            commission REAL DEFAULT 0,
+            swap REAL DEFAULT 0,
+            comment TEXT,
+            magic_number INTEGER,
+            session VARCHAR(50),
+            planned_rr REAL,
+            actual_rr REAL,
+            duration VARCHAR(50),
+            account_balance REAL,
+            account_equity REAL,
+            account_change_percent REAL,
+            status VARCHAR(20) CHECK(status IN ('OPEN', 'CLOSED', 'PENDING', 'CANCELLED')) DEFAULT 'OPEN',
+            floating_pnl REAL DEFAULT 0,
+            risk_per_trade REAL,
+            margin_used REAL,
+            strategy VARCHAR(100),
+            tags TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
     ''')
-
+    
     # Account history for equity curve (PostgreSQL syntax)
-    c.execute('''
-    CREATE TABLE IF NOT EXISTS account_history (
-        id SERIAL PRIMARY KEY,
-        timestamp TIMESTAMP NOT NULL,
-        balance REAL NOT NULL,
-        equity REAL NOT NULL,
-        margin REAL,
-        free_margin REAL,
-        leverage INTEGER,
-        currency VARCHAR(10),
-        server VARCHAR(100),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS account_history (
+            id SERIAL PRIMARY KEY,
+            timestamp TIMESTAMP NOT NULL,
+            balance REAL NOT NULL,
+            equity REAL NOT NULL,
+            margin REAL,
+            free_margin REAL,
+            leverage INTEGER,
+            currency VARCHAR(10),
+            server VARCHAR(100),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
     ''')
-
+    
     # Calendar PnL for daily performance (PostgreSQL syntax)
-    c.execute('''
-    CREATE TABLE IF NOT EXISTS calendar_pnl (
-        id SERIAL PRIMARY KEY,
-        date DATE UNIQUE NOT NULL,
-        daily_pnl REAL NOT NULL DEFAULT 0,
-        closed_trades INTEGER DEFAULT 0,
-        winning_trades INTEGER DEFAULT 0,
-        losing_trades INTEGER DEFAULT 0,
-        break_even_trades INTEGER DEFAULT 0,
-        win_rate REAL DEFAULT 0,
-        avg_win REAL DEFAULT 0,
-        avg_loss REAL DEFAULT 0,
-        largest_win REAL DEFAULT 0,
-        largest_loss REAL DEFAULT 0,
-        total_volume REAL DEFAULT 0,
-        daily_goal REAL DEFAULT 0,
-        goal_achieved BOOLEAN DEFAULT FALSE,
-        notes TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS calendar_pnl (
+            id SERIAL PRIMARY KEY,
+            date DATE UNIQUE NOT NULL,
+            daily_pnl REAL NOT NULL DEFAULT 0,
+            closed_trades INTEGER DEFAULT 0,
+            winning_trades INTEGER DEFAULT 0,
+            losing_trades INTEGER DEFAULT 0,
+            break_even_trades INTEGER DEFAULT 0,
+            win_rate REAL DEFAULT 0,
+            avg_win REAL DEFAULT 0,
+            avg_loss REAL DEFAULT 0,
+            largest_win REAL DEFAULT 0,
+            largest_loss REAL DEFAULT 0,
+            total_volume REAL DEFAULT 0,
+            daily_goal REAL DEFAULT 0,
+            goal_achieved BOOLEAN DEFAULT FALSE,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
     ''')
-
+    
     # Trade plans table (PostgreSQL syntax)
-    c.execute('''
-    CREATE TABLE IF NOT EXISTS trade_plans (
-        id SERIAL PRIMARY KEY,
-        date DATE NOT NULL,
-        symbol VARCHAR(50) NOT NULL,
-        trade_plan TEXT,
-        direction VARCHAR(10) CHECK(direction IN ('LONG', 'SHORT', 'BOTH')),
-        condition TEXT,
-        entry_price REAL,
-        stop_loss REAL,
-        take_profit REAL,
-        target_profit REAL,
-        risk_reward_ratio REAL,
-        confidence_level INTEGER CHECK(confidence_level >= 1 AND confidence_level <= 5),
-        status VARCHAR(20) CHECK(status IN ('PENDING', 'EXECUTED', 'CANCELLED', 'EXPIRED')) DEFAULT 'PENDING',
-        outcome TEXT,
-        actual_profit REAL,
-        notes TEXT,
-        image_path TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS trade_plans (
+            id SERIAL PRIMARY KEY,
+            date DATE NOT NULL,
+            symbol VARCHAR(50) NOT NULL,
+            trade_plan TEXT,
+            direction VARCHAR(10) CHECK(direction IN ('LONG', 'SHORT', 'BOTH')),
+            condition TEXT,
+            entry_price REAL,
+            stop_loss REAL,
+            take_profit REAL,
+            target_profit REAL,
+            risk_reward_ratio REAL,
+            confidence_level INTEGER CHECK(confidence_level >= 1 AND confidence_level <= 5),
+            status VARCHAR(20) CHECK(status IN ('PENDING', 'EXECUTED', 'CANCELLED', 'EXPIRED')) DEFAULT 'PENDING',
+            outcome TEXT,
+            actual_profit REAL,
+            notes TEXT,
+            image_path TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
     ''')
-
+    
     # Market analysis table (PostgreSQL syntax)
-    c.execute('''
-    CREATE TABLE IF NOT EXISTS market_analysis (
-        id SERIAL PRIMARY KEY,
-        date DATE NOT NULL,
-        symbol VARCHAR(50) NOT NULL,
-        timeframe VARCHAR(20),
-        analysis_type VARCHAR(50),
-        sentiment VARCHAR(20),
-        key_levels TEXT,
-        news_impact TEXT,
-        technical_analysis TEXT,
-        fundamental_analysis TEXT,
-        risk_level VARCHAR(20),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS market_analysis (
+            id SERIAL PRIMARY KEY,
+            date DATE NOT NULL,
+            symbol VARCHAR(50) NOT NULL,
+            timeframe VARCHAR(20),
+            analysis_type VARCHAR(50),
+            sentiment VARCHAR(20),
+            key_levels TEXT,
+            news_impact TEXT,
+            technical_analysis TEXT,
+            fundamental_analysis TEXT,
+            risk_level VARCHAR(20),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
     ''')
-
+    
     # Create indexes for performance
-    c.execute('CREATE INDEX IF NOT EXISTS idx_trades_ticket ON trades(ticket_id)')
-    c.execute('CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol)')
-    c.execute('CREATE INDEX IF NOT EXISTS idx_trades_entry_time ON trades(entry_time)')
-    c.execute('CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status)')
-    c.execute('CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar_pnl(date)')
-    c.execute('CREATE INDEX IF NOT EXISTS idx_account_history_timestamp ON account_history(timestamp)')
-
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_trades_ticket ON trades(ticket_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_trades_entry_time ON trades(entry_time)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar_pnl(date)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_account_history_timestamp ON account_history(timestamp)')
+    
     conn.commit()
-    c.close()
-    conn.close()
 
-    print("✅ PostgreSQL database initialized successfully!")
-
-# Remove or comment out the backup_database function since it's SQLite-specific
-# def backup_database():
-#     ... 
+def init_sqlite_schema(conn):
+    """Initialize SQLite schema with compatible syntax"""
+    cursor = conn.cursor()
+    
+    # Users table (SQLite syntax)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            email TEXT,
+            preferences TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_login DATETIME
+        )
+    ''')
+    
+    # Enhanced trades table (SQLite syntax)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS trades (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER UNIQUE,
+            symbol TEXT NOT NULL,
+            type TEXT CHECK(type IN ('BUY', 'SELL', 'BUY_LIMIT', 'SELL_LIMIT', 'BUY_STOP', 'SELL_STOP')),
+            volume REAL NOT NULL,
+            entry_price REAL NOT NULL,
+            current_price REAL,
+            exit_price REAL,
+            sl_price REAL,
+            tp_price REAL,
+            entry_time DATETIME NOT NULL,
+            exit_time DATETIME,
+            profit REAL DEFAULT 0,
+            commission REAL DEFAULT 0,
+            swap REAL DEFAULT 0,
+            comment TEXT,
+            magic_number INTEGER,
+            session TEXT,
+            planned_rr REAL,
+            actual_rr REAL,
+            duration TEXT,
+            account_balance REAL,
+            account_equity REAL,
+            account_change_percent REAL,
+            status TEXT CHECK(status IN ('OPEN', 'CLOSED', 'PENDING', 'CANCELLED')) DEFAULT 'OPEN',
+            floating_pnl REAL DEFAULT 0,
+            risk_per_trade REAL,
+            margin_used REAL,
+            strategy TEXT,
+            tags TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Account history for equity curve (SQLite syntax)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS account_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp DATETIME NOT NULL,
+            balance REAL NOT NULL,
+            equity REAL NOT NULL,
+            margin REAL,
+            free_margin REAL,
+            leverage INTEGER,
+            currency TEXT,
+            server TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Calendar PnL for daily performance (SQLite syntax)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS calendar_pnl (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date DATE UNIQUE NOT NULL,
+            daily_pnl REAL NOT NULL DEFAULT 0,
+            closed_trades INTEGER DEFAULT 0,
+            winning_trades INTEGER DEFAULT 0,
+            losing_trades INTEGER DEFAULT 0,
+            break_even_trades INTEGER DEFAULT 0,
+            win_rate REAL DEFAULT 0,
+            avg_win REAL DEFAULT 0,
+            avg_loss REAL DEFAULT 0,
+            largest_win REAL DEFAULT 0,
+            largest_loss REAL DEFAULT 0,
+            total_volume REAL DEFAULT 0,
+            daily_goal REAL DEFAULT 0,
+            goal_achieved BOOLEAN DEFAULT FALSE,
+            notes TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Trade plans table (SQLite syntax)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS trade_plans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date DATE NOT NULL,
+            symbol TEXT NOT NULL,
+            trade_plan TEXT,
+            direction TEXT CHECK(direction IN ('LONG', 'SHORT', 'BOTH')),
+            condition TEXT,
+            entry_price REAL,
+            stop_loss REAL,
+            take_profit REAL,
+            target_profit REAL,
+            risk_reward_ratio REAL,
+            confidence_level INTEGER CHECK(confidence_level >= 1 AND confidence_level <= 5),
+            status TEXT CHECK(status IN ('PENDING', 'EXECUTED', 'CANCELLED', 'EXPIRED')) DEFAULT 'PENDING',
+            outcome TEXT,
+            actual_profit REAL,
+            notes TEXT,
+            image_path TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Market analysis table (SQLite syntax)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS market_analysis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date DATE NOT NULL,
+            symbol TEXT NOT NULL,
+            timeframe TEXT,
+            analysis_type TEXT,
+            sentiment TEXT,
+            key_levels TEXT,
+            news_impact TEXT,
+            technical_analysis TEXT,
+            fundamental_analysis TEXT,
+            risk_level TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Create indexes for performance
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_trades_ticket ON trades(ticket_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_trades_entry_time ON trades(entry_time)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar_pnl(date)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_account_history_timestamp ON account_history(timestamp)')
+    
+    conn.commit()
 
 # Initialize database
 init_database()
 # -----------------------------------------------------------------------------
-# User Management (PostgreSQL Version)
+# User Management (Hybrid PostgreSQL/SQLite Version)
 # -----------------------------------------------------------------------------
 class User(UserMixin):
     def __init__(self, id_, username, password_hash, email=None, preferences=None):
@@ -683,66 +1356,159 @@ class User(UserMixin):
 
     @staticmethod
     def get(user_id):
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute('SELECT id, username, password_hash, email, preferences FROM users WHERE id = %s', (user_id,))
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
-        if row:
-            return User(row['id'], row['username'], row['password_hash'], row['email'], json.loads(row['preferences'] if row['preferences'] else '{}'))
-        return None
+        """Get user by ID - hybrid compatible"""
+        conn = db_manager.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            # Database-specific query
+            if conn.db_type == 'postgresql':
+                cursor.execute('SELECT id, username, password_hash, email, preferences FROM users WHERE id = %s', (user_id,))
+            else:
+                cursor.execute('SELECT id, username, password_hash, email, preferences FROM users WHERE id = ?', (user_id,))
+            
+            row = cursor.fetchone()
+            if row:
+                # Convert to dict for consistent access
+                if conn.db_type == 'postgresql':
+                    user_data = dict(row)
+                else:
+                    user_data = dict(zip([col[0] for col in cursor.description], row))
+                
+                # Parse preferences JSON
+                prefs = user_data.get('preferences', '{}')
+                if prefs and prefs != '{}':
+                    try:
+                        preferences = json.loads(prefs)
+                    except:
+                        preferences = {}
+                else:
+                    preferences = {}
+                
+                return User(
+                    user_data['id'], 
+                    user_data['username'], 
+                    user_data['password_hash'], 
+                    user_data.get('email'), 
+                    preferences
+                )
+            return None
+            
+        except Exception as e:
+            print(f"User.get error: {e}")
+            return None
+        finally:
+            conn.close()
 
     @staticmethod
     def get_by_username(username):
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute('SELECT id, username, password_hash, email, preferences FROM users WHERE username = %s', (username,))
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
-        if row:
-            return User(row['id'], row['username'], row['password_hash'], row['email'], json.loads(row['preferences'] if row['preferences'] else '{}'))
-        return None
+        """Get user by username - hybrid compatible"""
+        conn = db_manager.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            # Database-specific query
+            if conn.db_type == 'postgresql':
+                cursor.execute('SELECT id, username, password_hash, email, preferences FROM users WHERE username = %s', (username,))
+            else:
+                cursor.execute('SELECT id, username, password_hash, email, preferences FROM users WHERE username = ?', (username,))
+            
+            row = cursor.fetchone()
+            if row:
+                # Convert to dict for consistent access
+                if conn.db_type == 'postgresql':
+                    user_data = dict(row)
+                else:
+                    user_data = dict(zip([col[0] for col in cursor.description], row))
+                
+                # Parse preferences JSON
+                prefs = user_data.get('preferences', '{}')
+                if prefs and prefs != '{}':
+                    try:
+                        preferences = json.loads(prefs)
+                    except:
+                        preferences = {}
+                else:
+                    preferences = {}
+                
+                return User(
+                    user_data['id'], 
+                    user_data['username'], 
+                    user_data['password_hash'], 
+                    user_data.get('email'), 
+                    preferences
+                )
+            return None
+            
+        except Exception as e:
+            print(f"User.get_by_username error: {e}")
+            return None
+        finally:
+            conn.close()
 
     @staticmethod
     def create(username, password, email=None):
+        """Create new user - hybrid compatible"""
         password_hash = generate_password_hash(password)
         preferences = json.dumps({'theme': 'dark', 'notifications': True})
 
-        conn = get_db_connection()
-        cur = conn.cursor()
+        conn = db_manager.get_connection()
         try:
-            # PostgreSQL uses %s placeholders and RETURNING id
-            cur.execute(
-                'INSERT INTO users (username, password_hash, email, preferences) VALUES (%s, %s, %s, %s) RETURNING id',
-                (username, password_hash, email, preferences)
-            )
-            user_id = cur.fetchone()['id']
+            cursor = conn.cursor()
+            
+            if conn.db_type == 'postgresql':
+                # PostgreSQL uses %s placeholders and RETURNING id
+                cursor.execute(
+                    'INSERT INTO users (username, password_hash, email, preferences) VALUES (%s, %s, %s, %s) RETURNING id',
+                    (username, password_hash, email, preferences)
+                )
+                user_id = cursor.fetchone()[0]
+            else:
+                # SQLite uses ? placeholders and lastrowid
+                cursor.execute(
+                    'INSERT INTO users (username, password_hash, email, preferences) VALUES (?, ?, ?, ?)',
+                    (username, password_hash, email, preferences)
+                )
+                user_id = cursor.lastrowid
+            
             conn.commit()
             return User(user_id, username, password_hash, email, json.loads(preferences))
-        except psycopg2.IntegrityError:
-            conn.rollback()
-            return None
+            
         except Exception as e:
             conn.rollback()
-            print(f"Database error in User.create: {e}")
-            return None
+            # Handle unique constraint violation for both databases
+            error_msg = str(e).lower()
+            if 'unique' in error_msg or 'duplicate' in error_msg:
+                print(f"Username already exists: {username}")
+                return None
+            else:
+                print(f"Database error in User.create: {e}")
+                return None
         finally:
-            cur.close()
             conn.close()
 
     def update_last_login(self):
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = %s', (self.id,))
-        conn.commit()
-        cur.close()
-        conn.close()
+        """Update last login timestamp - hybrid compatible"""
+        conn = db_manager.get_connection()
+        try:
+            cursor = conn.cursor()
+            
+            if conn.db_type == 'postgresql':
+                cursor.execute('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = %s', (self.id,))
+            else:
+                cursor.execute('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', (self.id,))
+            
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            print(f"Error updating last login: {e}")
+        finally:
+            conn.close()
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.get(int(user_id))
+    
 # -----------------------------------------------------------------------------
 # ADVANCED TRADING CALCULATIONS & ANALYTICS
 # -----------------------------------------------------------------------------
@@ -1246,10 +2012,10 @@ class ProfessionalStatisticsGenerator:
 stats_generator = ProfessionalStatisticsGenerator()
 
 # -----------------------------------------------------------------------------
-# CALENDAR DASHBOARD SYSTEM
+# CALENDAR DASHBOARD SYSTEM (HYBRID VERSION)
 # -----------------------------------------------------------------------------
 class CalendarDashboard:
-    """Advanced calendar system for daily PnL tracking"""
+    """Advanced calendar system for daily PnL tracking with hybrid database support"""
 
     @staticmethod
     def update_daily_calendar(date=None):
@@ -1257,55 +2023,99 @@ class CalendarDashboard:
         if date is None:
             date = datetime.now().date()
 
-        conn = get_db_connection()
+        conn = db_manager.get_connection()
         try:
-            # Get trades for the specific date
-            start_datetime = datetime.combine(date, datetime.min.time())
-            end_datetime = datetime.combine(date, datetime.max.time())
+            # Database-specific date handling
+            if conn.db_type == 'postgresql':
+                date_query = "DATE(exit_time) = %s"
+                date_param = date
+            else:
+                date_query = "date(exit_time) = date(?)"
+                date_param = date.isoformat()  # SQLite needs string date
 
-            query = '''
+            query = f'''
                 SELECT * FROM trades 
                 WHERE status = 'CLOSED' 
-                AND date(exit_time) = date(?)
+                AND {date_query}
             '''
-            df = pd.read_sql(query, conn, params=(start_datetime,))
-
-            if df.empty:
+            
+            # Execute query using hybrid manager
+            trades = db_manager.execute_query(query, (date_param,))
+            
+            if not trades:
                 # Create empty entry for the day
-                cursor = conn.cursor()
-                cursor.execute('''
-                    INSERT OR REPLACE INTO calendar_pnl 
-                    (date, daily_pnl, closed_trades, winning_trades, losing_trades, break_even_trades, win_rate)
-                    VALUES (?, 0, 0, 0, 0, 0, 0)
-                ''', (date,))
-                conn.commit()
+                if conn.db_type == 'postgresql':
+                    insert_query = '''
+                        INSERT INTO calendar_pnl 
+                        (date, daily_pnl, closed_trades, winning_trades, losing_trades, break_even_trades, win_rate)
+                        VALUES (%s, 0, 0, 0, 0, 0, 0)
+                        ON CONFLICT (date) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+                    '''
+                else:
+                    insert_query = '''
+                        INSERT OR REPLACE INTO calendar_pnl 
+                        (date, daily_pnl, closed_trades, winning_trades, losing_trades, break_even_trades, win_rate)
+                        VALUES (?, 0, 0, 0, 0, 0, 0)
+                    '''
+                
+                db_manager.execute_query(insert_query, (date,))
                 return {'date': date, 'daily_pnl': 0, 'closed_trades': 0}
 
-            # Calculate daily metrics
-            daily_pnl = float(df['profit'].sum())
-            closed_trades = len(df)
-            winning_trades = len(df[df['profit'] > 0])
-            losing_trades = len(df[df['profit'] < 0])
-            break_even_trades = len(df[df['profit'] == 0])
+            # Calculate comprehensive daily metrics
+            daily_pnl = float(sum(trade.get('profit', 0) for trade in trades))
+            closed_trades = len(trades)
+            winning_trades = len([t for t in trades if t.get('profit', 0) > 0])
+            losing_trades = len([t for t in trades if t.get('profit', 0) < 0])
+            break_even_trades = len([t for t in trades if t.get('profit', 0) == 0])
+            
+            # Calculate win rate
             win_rate = (winning_trades / closed_trades * 100) if closed_trades > 0 else 0
+            
+            # Calculate average wins and losses
+            winning_profits = [t.get('profit', 0) for t in trades if t.get('profit', 0) > 0]
+            losing_profits = [t.get('profit', 0) for t in trades if t.get('profit', 0) < 0]
+            
+            avg_win = float(np.mean(winning_profits)) if winning_profits else 0
+            avg_loss = float(np.mean(losing_profits)) if losing_profits else 0
+            largest_win = float(max(winning_profits)) if winning_profits else 0
+            largest_loss = float(min(losing_profits)) if losing_profits else 0
+            
+            # Calculate total volume
+            total_volume = float(sum(trade.get('volume', 0) for trade in trades))
 
-            avg_win = float(df[df['profit'] > 0]['profit'].mean()) if winning_trades > 0 else 0
-            avg_loss = float(df[df['profit'] < 0]['profit'].mean()) if losing_trades > 0 else 0
-            largest_win = float(df['profit'].max())
-            largest_loss = float(df['profit'].min())
-            total_volume = float(df['volume'].sum()) if 'volume' in df.columns else 0
+            # Update calendar entry with database-specific syntax
+            if conn.db_type == 'postgresql':
+                update_query = '''
+                    INSERT INTO calendar_pnl 
+                    (date, daily_pnl, closed_trades, winning_trades, losing_trades, break_even_trades, 
+                     win_rate, avg_win, avg_loss, largest_win, largest_loss, total_volume, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (date) DO UPDATE SET
+                        daily_pnl = EXCLUDED.daily_pnl,
+                        closed_trades = EXCLUDED.closed_trades,
+                        winning_trades = EXCLUDED.winning_trades,
+                        losing_trades = EXCLUDED.losing_trades,
+                        break_even_trades = EXCLUDED.break_even_trades,
+                        win_rate = EXCLUDED.win_rate,
+                        avg_win = EXCLUDED.avg_win,
+                        avg_loss = EXCLUDED.avg_loss,
+                        largest_win = EXCLUDED.largest_win,
+                        largest_loss = EXCLUDED.largest_loss,
+                        total_volume = EXCLUDED.total_volume,
+                        updated_at = CURRENT_TIMESTAMP
+                '''
+            else:
+                update_query = '''
+                    INSERT OR REPLACE INTO calendar_pnl 
+                    (date, daily_pnl, closed_trades, winning_trades, losing_trades, break_even_trades,
+                     win_rate, avg_win, avg_loss, largest_win, largest_loss, total_volume, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                '''
 
-            # Update calendar entry
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT OR REPLACE INTO calendar_pnl 
-                (date, daily_pnl, closed_trades, winning_trades, losing_trades, break_even_trades, 
-                 win_rate, avg_win, avg_loss, largest_win, largest_loss, total_volume)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (date, daily_pnl, closed_trades, winning_trades, losing_trades, break_even_trades,
-                  win_rate, avg_win, avg_loss, largest_win, largest_loss, total_volume))
-
-            conn.commit()
+            db_manager.execute_query(update_query, (
+                date, daily_pnl, closed_trades, winning_trades, losing_trades, break_even_trades,
+                win_rate, avg_win, avg_loss, largest_win, largest_loss, total_volume
+            ))
 
             result = {
                 'date': date,
@@ -1327,16 +2137,15 @@ class CalendarDashboard:
 
         except Exception as e:
             add_log('ERROR', f'Calendar update error for {date}: {e}', 'Calendar')
-            conn.rollback()
             return {'error': str(e)}
         finally:
             conn.close()
 
     @staticmethod
     def get_monthly_calendar(year, month):
-        """Get comprehensive monthly calendar data"""
+        """Get comprehensive monthly calendar data with hybrid database support"""
         try:
-            conn = get_db_connection()
+            conn = db_manager.get_connection()
 
             # Get calendar data for the month
             start_date = f"{year}-{month:02d}-01"
@@ -1345,12 +2154,20 @@ class CalendarDashboard:
             else:
                 end_date = f"{year}-{month+1:02d}-01"
 
-            query = '''
-                SELECT * FROM calendar_pnl 
-                WHERE date >= ? AND date < ?
-                ORDER BY date
-            '''
-            df = pd.read_sql(query, conn, params=(start_date, end_date))
+            if conn.db_type == 'postgresql':
+                query = '''
+                    SELECT * FROM calendar_pnl 
+                    WHERE date >= %s AND date < %s
+                    ORDER BY date
+                '''
+            else:
+                query = '''
+                    SELECT * FROM calendar_pnl 
+                    WHERE date >= ? AND date < ?
+                    ORDER BY date
+                '''
+
+            calendar_df_data = db_manager.execute_query(query, (start_date, end_date))
 
             # Create complete calendar structure
             cal = calendar.Calendar()
@@ -1364,15 +2181,20 @@ class CalendarDashboard:
                         week_data.append(None)
                     else:
                         date_str = f"{year}-{month:02d}-{day:02d}"
-                        day_data = df[df['date'] == date_str]
+                        
+                        # Find day data
+                        day_data = None
+                        for cal_day in calendar_df_data:
+                            if str(cal_day.get('date')) == date_str:
+                                day_data = cal_day
+                                break
 
-                        if not day_data.empty:
-                            day_info = day_data.iloc[0].to_dict()
+                        if day_data:
                             week_data.append({
                                 'day': day,
-                                'pnl': day_info.get('daily_pnl', 0),
-                                'trades': day_info.get('closed_trades', 0),
-                                'win_rate': day_info.get('win_rate', 0),
+                                'pnl': day_data.get('daily_pnl', 0),
+                                'trades': day_data.get('closed_trades', 0),
+                                'win_rate': day_data.get('win_rate', 0),
                                 'has_data': True
                             })
                         else:
@@ -1386,17 +2208,32 @@ class CalendarDashboard:
                 calendar_data.append(week_data)
 
             # Calculate monthly summary
-            monthly_pnl = float(df['daily_pnl'].sum())
-            monthly_trades = int(df['closed_trades'].sum())
-            monthly_win_rate = float(df['win_rate'].mean()) if len(df) > 0 else 0
+            if calendar_df_data:
+                monthly_pnl = float(sum(day.get('daily_pnl', 0) for day in calendar_df_data))
+                monthly_trades = int(sum(day.get('closed_trades', 0) for day in calendar_df_data))
+                
+                # Calculate average win rate (weighted by trades)
+                total_weighted_win_rate = sum(day.get('win_rate', 0) * day.get('closed_trades', 0) for day in calendar_df_data)
+                monthly_win_rate = total_weighted_win_rate / monthly_trades if monthly_trades > 0 else 0
+                
+                profitable_days = len([day for day in calendar_df_data if day.get('daily_pnl', 0) > 0])
+                losing_days = len([day for day in calendar_df_data if day.get('daily_pnl', 0) < 0])
+                break_even_days = len([day for day in calendar_df_data if day.get('daily_pnl', 0) == 0])
+            else:
+                monthly_pnl = 0
+                monthly_trades = 0
+                monthly_win_rate = 0
+                profitable_days = 0
+                losing_days = 0
+                break_even_days = 0
 
             monthly_summary = {
                 'total_pnl': round(monthly_pnl, 2),
                 'total_trades': monthly_trades,
                 'avg_win_rate': round(monthly_win_rate, 2),
-                'profitable_days': len(df[df['daily_pnl'] > 0]),
-                'losing_days': len(df[df['daily_pnl'] < 0]),
-                'break_even_days': len(df[df['daily_pnl'] == 0])
+                'profitable_days': profitable_days,
+                'losing_days': losing_days,
+                'break_even_days': break_even_days
             }
 
             return {
@@ -1413,11 +2250,8 @@ class CalendarDashboard:
         finally:
             conn.close()
 
-# Initialize calendar system
-calendar_dashboard = CalendarDashboard()
-
 # -----------------------------------------------------------------------------
-# DATA STORAGE & SYNCHRONIZATION
+# DATA STORAGE & SYNCHRONIZATION (HYBRID VERSION)
 # -----------------------------------------------------------------------------
 class ProfessionalDataStore:
     """Professional global data storage for real-time access"""
@@ -1436,7 +2270,7 @@ class ProfessionalDataStore:
 global_data = ProfessionalDataStore()
 
 class ProfessionalDataSynchronizer:
-    """Professional MT5 data synchronization with universal adaptability"""
+    """Professional MT5 data synchronization with hybrid database support"""
 
     def __init__(self):
         self.sync_lock = threading.Lock()
@@ -1467,7 +2301,7 @@ class ProfessionalDataSynchronizer:
             trades = self.get_trade_history(self.days_history)
 
             # Update database
-            success = self.update_database(trades, account_data)
+            success = self.update_database_hybrid(trades, account_data)
 
             if success:
                 # Update global data store
@@ -1782,50 +2616,43 @@ class ProfessionalDataSynchronizer:
 
         return demo_trades
 
-    def update_database(self, trades, account_data):
-        """Update database with professional error handling"""
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
+    def update_database_hybrid(self, trades, account_data):
+        """Update database with hybrid compatibility"""
+        conn = db_manager.get_connection()
+        
         try:
-            # Start transaction
-            cursor.execute('BEGIN TRANSACTION')
+            # Start transaction with database-specific syntax
+            if conn.db_type == 'postgresql':
+                cursor = conn.cursor()
+                cursor.execute('BEGIN')
+            else:
+                cursor = conn.cursor()
+                cursor.execute('BEGIN TRANSACTION')
 
-            # Update trades
+            # Update trades with hybrid approach
             for trade in trades:
-                self.insert_or_update_professional_trade(cursor, trade, account_data)
+                self.insert_or_update_trade_hybrid(cursor, trade, account_data, conn.db_type)
 
-            # Update account history
-            self.update_account_history(cursor, account_data)
-
-            # Update calendar for today
-            calendar_dashboard.update_daily_calendar()
+            # Update account history with hybrid approach
+            self.update_account_history_hybrid(cursor, account_data, conn.db_type)
 
             # Commit transaction
             conn.commit()
-            add_log('INFO', f'Professional database update: {len(trades)} trades', 'Database')
+            add_log('INFO', f'Hybrid database update: {len(trades)} trades to {conn.db_type}', 'Database')
             return True
 
         except Exception as e:
             conn.rollback()
-            add_log('ERROR', f'Professional database update error: {e}', 'Database')
+            add_log('ERROR', f'Hybrid database update error: {e}', 'Database')
             return False
         finally:
             conn.close()
 
-    def insert_or_update_professional_trade(self, cursor, trade, account_data):
-        """Professional trade insertion/update with comprehensive fields"""
+    def insert_or_update_trade_hybrid(self, cursor, trade, account_data, db_type):
+        """Professional trade insertion/update with hybrid compatibility"""
         try:
-            cursor.execute('''
-                INSERT OR REPLACE INTO trades (
-                    ticket_id, symbol, type, volume, entry_price, current_price, exit_price,
-                    sl_price, tp_price, entry_time, exit_time, profit, commission, swap,
-                    comment, magic_number, session, planned_rr, actual_rr, duration, 
-                    account_balance, account_equity, account_change_percent, status, 
-                    floating_pnl, risk_per_trade, margin_used, strategy, tags, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-                         ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ''', (
+            # Prepare the values
+            values = (
                 trade.get('ticket_id'),
                 trade.get('symbol'),
                 trade.get('type'),
@@ -1855,19 +2682,72 @@ class ProfessionalDataSynchronizer:
                 safe_float_conversion(trade.get('margin_used', 0)),
                 trade.get('strategy', ''),
                 trade.get('tags', '')
-            ))
+            )
+
+            if db_type == 'postgresql':
+                # PostgreSQL UPSERT syntax
+                query = '''
+                    INSERT INTO trades (
+                        ticket_id, symbol, type, volume, entry_price, current_price, exit_price,
+                        sl_price, tp_price, entry_time, exit_time, profit, commission, swap,
+                        comment, magic_number, session, planned_rr, actual_rr, duration, 
+                        account_balance, account_equity, account_change_percent, status, 
+                        floating_pnl, risk_per_trade, margin_used, strategy, tags, updated_at
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+                             %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (ticket_id) DO UPDATE SET
+                        symbol = EXCLUDED.symbol,
+                        type = EXCLUDED.type,
+                        volume = EXCLUDED.volume,
+                        entry_price = EXCLUDED.entry_price,
+                        current_price = EXCLUDED.current_price,
+                        exit_price = EXCLUDED.exit_price,
+                        sl_price = EXCLUDED.sl_price,
+                        tp_price = EXCLUDED.tp_price,
+                        entry_time = EXCLUDED.entry_time,
+                        exit_time = EXCLUDED.exit_time,
+                        profit = EXCLUDED.profit,
+                        commission = EXCLUDED.commission,
+                        swap = EXCLUDED.swap,
+                        comment = EXCLUDED.comment,
+                        magic_number = EXCLUDED.magic_number,
+                        session = EXCLUDED.session,
+                        planned_rr = EXCLUDED.planned_rr,
+                        actual_rr = EXCLUDED.actual_rr,
+                        duration = EXCLUDED.duration,
+                        account_balance = EXCLUDED.account_balance,
+                        account_equity = EXCLUDED.account_equity,
+                        account_change_percent = EXCLUDED.account_change_percent,
+                        status = EXCLUDED.status,
+                        floating_pnl = EXCLUDED.floating_pnl,
+                        risk_per_trade = EXCLUDED.risk_per_trade,
+                        margin_used = EXCLUDED.margin_used,
+                        strategy = EXCLUDED.strategy,
+                        tags = EXCLUDED.tags,
+                        updated_at = CURRENT_TIMESTAMP
+                '''
+            else:
+                # SQLite REPLACE syntax
+                query = '''
+                    INSERT OR REPLACE INTO trades (
+                        ticket_id, symbol, type, volume, entry_price, current_price, exit_price,
+                        sl_price, tp_price, entry_time, exit_time, profit, commission, swap,
+                        comment, magic_number, session, planned_rr, actual_rr, duration, 
+                        account_balance, account_equity, account_change_percent, status, 
+                        floating_pnl, risk_per_trade, margin_used, strategy, tags, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+                             ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                '''
+
+            cursor.execute(query, values)
 
         except Exception as e:
-            add_log('ERROR', f'Professional trade save error {trade.get("ticket_id")}: {e}', 'Database')
+            add_log('ERROR', f'Hybrid trade save error {trade.get("ticket_id")}: {e}', 'Database')
 
-    def update_account_history(self, cursor, account_data):
-        """Update professional account history"""
+    def update_account_history_hybrid(self, cursor, account_data, db_type):
+        """Update professional account history with hybrid compatibility"""
         try:
-            cursor.execute('''
-                INSERT INTO account_history 
-                (timestamp, balance, equity, margin, free_margin, leverage, currency, server)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
+            values = (
                 datetime.now(),
                 account_data.get('balance', 0),
                 account_data.get('equity', 0),
@@ -1876,9 +2756,24 @@ class ProfessionalDataSynchronizer:
                 account_data.get('leverage', 100),
                 account_data.get('currency', 'USD'),
                 account_data.get('server', 'MT5')
-            ))
+            )
+
+            if db_type == 'postgresql':
+                query = '''
+                    INSERT INTO account_history 
+                    (timestamp, balance, equity, margin, free_margin, leverage, currency, server)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                '''
+            else:
+                query = '''
+                    INSERT INTO account_history 
+                    (timestamp, balance, equity, margin, free_margin, leverage, currency, server)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                '''
+
+            cursor.execute(query, values)
         except Exception as e:
-            add_log('ERROR', f'Account history update error: {e}', 'Database')
+            add_log('ERROR', f'Hybrid account history update error: {e}', 'Database')
 
 # Initialize professional synchronizer
 data_synchronizer = ProfessionalDataSynchronizer()
@@ -1930,9 +2825,6 @@ auto_sync_thread = ProfessionalAutoSyncThread(
 auto_sync_thread.start()
 
 
-# -----------------------------------------------------------------------------
-# FLASK-WTF FORMS
-# -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # FLASK-WTF FORMS
 # -----------------------------------------------------------------------------
@@ -2119,6 +3011,123 @@ def reset_trade_plans_table():
         print(f"❌ Error resetting trade plans table: {e}")
 
 
+# =============================================================================
+# LICENSE VALIDATION MIDDLEWARE
+# =============================================================================
+
+@app.before_request
+def check_license():
+    """Check license status before each request"""
+    # Skip license check for certain routes
+    exempt_routes = ['static', 'login', 'register', 'logout', 'api_validate_license']
+    
+    if request.endpoint in exempt_routes:
+        return
+    
+    # Check license status
+    is_valid, message = license_manager.validate_license()
+    
+    if not is_valid:
+        # Allow access to license management page even if expired
+        if request.endpoint not in ['license_management', 'api_license_status', 'api_activate_license']:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({
+                    'error': 'License required',
+                    'message': message,
+                    'redirect': url_for('license_management')
+                }), 402  # Payment Required
+            else:
+                flash(f'⚠️ {message}. Please activate your license.', 'warning')
+                return redirect(url_for('license_management'))
+# =============================================================================
+# DESKTOP APP CONFIGURATION
+# =============================================================================
+
+def setup_desktop_environment():
+    """Setup desktop-specific environment"""
+    if detect_environment() == 'sqlite':
+        # Create necessary desktop directories
+        desktop_dirs = [
+            os.path.join(os.path.expanduser('~'), 'Documents', 'MT5Journal', 'exports'),
+            os.path.join(os.path.expanduser('~'), 'Documents', 'MT5Journal', 'backups'),
+            os.path.join(os.path.expanduser('~'), 'Documents', 'MT5Journal', 'reports')
+        ]
+        
+        for directory in desktop_dirs:
+            os.makedirs(directory, exist_ok=True)
+        
+        # Set desktop-specific configurations
+        config.setdefault('desktop', {})
+        config['desktop'].update({
+            'auto_start': False,
+            'minimize_to_tray': True,
+            'start_with_windows': False,
+            'export_directory': desktop_dirs[0],
+            'backup_directory': desktop_dirs[1]
+        })
+        
+        print("✅ Desktop environment configured")
+
+# Call setup during initialization
+setup_desktop_environment()
+
+# =============================================================================
+# CROSS-PLATFORM UTILITIES
+# =============================================================================
+
+def get_platform_specific_config():
+    """Get platform-specific configuration"""
+    system = platform.system().lower()
+    
+    config = {
+        'windows': {
+            'terminal_path': 'C:\\Program Files\\MetaTrader 5\\terminal64.exe',
+            'data_dir': os.path.join(os.environ.get('APPDATA', ''), 'MT5Journal'),
+            'backup_dir': os.path.join(os.environ.get('USERPROFILE', ''), 'Documents', 'MT5Journal', 'backups')
+        },
+        'darwin': {  # macOS
+            'terminal_path': '/Applications/MetaTrader 5.app/Contents/MacOS/terminal64',
+            'data_dir': os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'MT5Journal'),
+            'backup_dir': os.path.join(os.path.expanduser('~'), 'Documents', 'MT5Journal', 'backups')
+        },
+        'linux': {
+            'terminal_path': '/usr/bin/mt5',
+            'data_dir': os.path.join(os.path.expanduser('~'), '.mt5journal'),
+            'backup_dir': os.path.join(os.path.expanduser('~'), 'Documents', 'MT5Journal', 'backups')
+        }
+    }
+    
+    return config.get(system, config['windows'])  # Default to Windows
+
+def setup_auto_start():
+    """Setup auto-start based on platform"""
+    system = platform.system().lower()
+    
+    try:
+        if system == 'windows':
+            setup_windows_auto_start()
+        elif system == 'darwin':
+            setup_macos_auto_start()
+        elif system == 'linux':
+            setup_linux_auto_start()
+    except Exception as e:
+        add_log('ERROR', f'Auto-start setup failed: {e}', 'Desktop')
+
+def setup_windows_auto_start():
+    """Setup Windows auto-start"""
+    if config.get('desktop', {}).get('start_with_windows'):
+        try:
+            import winreg
+            key = winreg.HKEY_CURRENT_USER
+            subkey = r"Software\Microsoft\Windows\CurrentVersion\Run"
+            
+            with winreg.OpenKey(key, subkey, 0, winreg.KEY_SET_VALUE) as reg_key:
+                app_path = os.path.abspath(sys.executable)
+                winreg.SetValueEx(reg_key, "MT5Journal", 0, winreg.REG_SZ, app_path)
+                
+            add_log('INFO', 'Windows auto-start configured', 'Desktop')
+        except Exception as e:
+            add_log('ERROR', f'Windows auto-start failed: {e}', 'Desktop')
 
 # =============================================================================
 # SYNC API ROUTES
@@ -2127,6 +3136,7 @@ def reset_trade_plans_table():
 @app.route('/api/sync_now')
 @login_required
 def api_sync_now():
+@hybrid_compatible 
     """Professional manual sync API"""
     try:
         print("🔄 Manual sync requested via API")
@@ -2160,6 +3170,7 @@ def api_sync_now():
 @app.route('/api/sync_status')
 @login_required
 def api_sync_status():
+@hybrid_compatible 
     """Get current sync status"""
     try:
         conn = get_db_connection()
@@ -2184,18 +3195,66 @@ def api_sync_status():
 # FLASK ROUTES - PROFESSIONAL IMPLEMENTATION
 # -----------------------------------------------------------------------------
 @app.context_processor
-def inject_professional_data():
-    """Inject professional data into all templates"""
+def inject_hybrid_data():
+    """Inject hybrid-specific data into all templates"""
+    environment = detect_environment()
+    is_demo_mode = not mt5_manager.connected
+    
+    # Get license information (if license manager exists)
+    try:
+        license_info = license_manager.get_license_info()
+    except:
+        # Fallback if license manager not available
+        license_info = {
+            'status': 'free',
+            'is_valid': True,
+            'trial_days_left': None,
+            'features': ['full_trading_journal', 'advanced_analytics', 'ai_coaching', 'risk_analysis'],
+            'message': 'Free Version - All Features Included'
+        }
+    
     return {
+        # KEEP ALL EXISTING VARIABLES (Backward Compatibility)
         'current_time': datetime.now().strftime('%H:%M:%S'),
         'current_date': datetime.now().strftime('%Y-%m-%d'),
         'app_name': 'Professional MT5 Journal',
         'app_version': '2.0.0',
         'mt5_connected': mt5_manager.connected,
-        'demo_mode': not mt5_manager.connected
+        'demo_mode': is_demo_mode,
+        
+        # ADD NEW HYBRID VARIABLES (Automatic Injection)
+        'environment': environment,
+        'is_web': environment == 'postgresql',
+        'is_desktop': environment == 'sqlite',
+        'db_type': environment,
+        'is_postgresql': environment == 'postgresql',
+        'is_sqlite': environment == 'sqlite',
+        'mt5_available': MT5_AVAILABLE,
+        'hybrid_mode': True,
+        'current_datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'current_year': datetime.now().year,
+        'current_month': datetime.now().month,
+        'current_month_name': datetime.now().strftime('%B'),
+        
+        # ADDED: Enhanced status variables
+        'connection_attempts': mt5_manager.connection_attempts,
+        'last_connection': mt5_manager.last_connection,
+        
+        # ADDED: Helper functions for templates (optional)
+        'format_currency': lambda x: f"${x:,.2f}" if isinstance(x, (int, float)) else "$0.00",
+        'format_percent': lambda x: f"{x:.2f}%" if isinstance(x, (int, float)) else "0.00%",
+        'is_profitable': lambda pnl: pnl > 0 if isinstance(pnl, (int, float)) else False,
+        
+        # ADD LICENSE INFORMATION (New Addition)
+        'license_status': license_info['status'],
+        'license_valid': license_info['is_valid'],
+        'trial_days_left': license_info['trial_days_left'],
+        'license_features': license_info['features'],
+        'license_message': license_info['message'],
+        'is_premium': license_info['status'] == 'licensed' or license_info['status'] == 'free'
     }
 
-# ... your other routes continue below ...
+# ... your other routes continue below EXACTLY AS THEY ARE ...
 @app.route('/')
 def index():
     """Professional home page"""
@@ -2283,6 +3342,7 @@ def logout():
 # =============================================================================
 @app.route('/dashboard')
 @login_required
+@hybrid_compatible
 def professional_dashboard():
     """Enhanced professional dashboard with safe dictionary handling"""
     try:
@@ -2329,13 +3389,18 @@ def professional_dashboard():
 # COMPREHENSIVE STATISTICS DASHBOARD ROUTE
 # =============================================================================
 
+# =============================================================================
+# HYBRID-UPGRADED STATISTICS DASHBOARD ROUTE
+# =============================================================================
+
 @app.route('/statistics')
 @login_required
 def statistics_dashboard():
-    """Main statistics dashboard - leverages ALL existing statistical functions"""
+@hybrid_compatible 
+    """Main statistics dashboard - HYBRID COMPATIBLE VERSION"""
     period = request.args.get('period', 'monthly')
 
-    conn = get_db_connection()
+    conn = get_universal_connection()  # CHANGED: Use universal connection
     try:
         # Get filtered data using existing functions
         df = get_trades_by_period(conn, period)
@@ -2371,7 +3436,7 @@ def statistics_dashboard():
 
 
 def get_trades_by_period(conn, period):
-    """Get trades filtered by time period"""
+    """Get trades filtered by time period - HYBRID COMPATIBLE VERSION"""
     end_date = datetime.now()
 
     if period == 'daily':
@@ -2387,10 +3452,12 @@ def get_trades_by_period(conn, period):
     elif period == '1year':
         start_date = end_date - timedelta(days=365)
     else:
-        return pd.read_sql('SELECT * FROM trades', conn)  # All time
+        # CHANGED: Use hybrid dataframe fetch for "All time"
+        return conn_fetch_dataframe(conn, 'SELECT * FROM trades')
 
+    # CHANGED: Use hybrid dataframe fetch with parameters
     query = 'SELECT * FROM trades WHERE entry_time >= ?'
-    return pd.read_sql(query, conn, params=(start_date,))
+    return conn_fetch_dataframe(conn, query, params=(start_date,))
 
 
 def calculate_symbol_performance(df):
@@ -2444,11 +3511,16 @@ def calculate_strategy_performance(df):
     return sorted(strategy_stats, key=lambda x: x['net_pnl'], reverse=True)
 
 
+# =============================================================================
+# HYBRID-UPGRADED JOURNAL ROUTE
+# =============================================================================
+
 @app.route('/journal')
 @login_required
 def journal():
-    """Professional trade journal with advanced calculations"""
-    conn = get_db_connection()
+@hybrid_compatible 
+    """Professional trade journal with advanced calculations - HYBRID COMPATIBLE VERSION"""
+    conn = get_universal_connection()  # CHANGED: Use universal connection
     try:
         # Get pagination parameters
         page = request.args.get('page', 1, type=int)
@@ -2474,17 +3546,18 @@ def journal():
         query += ' ORDER BY entry_time DESC LIMIT ? OFFSET ?'
         params.extend([per_page, offset])
 
-        trades = pd.read_sql(query, conn, params=params)
+        # CHANGED: Use hybrid dataframe fetch
+        trades = conn_fetch_dataframe(conn, query, params=params)
         trades_dict = trades.to_dict('records') if not trades.empty else []
 
         # ADD: Convert string dates to datetime objects
         trades_dict = convert_trade_dates(trades_dict)
 
-        # Get unique symbols for filter dropdown
-        symbols = pd.read_sql('SELECT DISTINCT symbol FROM trades ORDER BY symbol', conn)
+        # Get unique symbols for filter dropdown - CHANGED: Use hybrid dataframe fetch
+        symbols = conn_fetch_dataframe(conn, 'SELECT DISTINCT symbol FROM trades ORDER BY symbol')
         symbols_list = symbols['symbol'].tolist() if not symbols.empty else []
 
-        # Get total count for pagination
+        # Get total count for pagination - CHANGED: Use universal fetch for count
         count_query = 'SELECT COUNT(*) as total FROM trades WHERE 1=1'
         count_params = []
 
@@ -2496,10 +3569,12 @@ def journal():
             count_query += ' AND status = ?'
             count_params.append(status_filter)
 
-        total_count = pd.read_sql(count_query, conn, params=count_params).iloc[0]['total']
+        cursor = conn.cursor()
+        universal_execute(cursor, count_query, count_params)
+        total_count = cursor.fetchone()[0]
 
-        # ADD: Calculate professional statistics - WITH ERROR HANDLING
-        df_all_trades = pd.read_sql('SELECT * FROM trades WHERE status = "CLOSED"', conn)
+        # ADD: Calculate professional statistics - WITH ERROR HANDLING - CHANGED: Use hybrid dataframe fetch
+        df_all_trades = conn_fetch_dataframe(conn, 'SELECT * FROM trades WHERE status = "CLOSED"')
 
         # SAFE STATS GENERATION - FIX FOR max_drawdown ERROR
         if not df_all_trades.empty:
@@ -2528,8 +3603,8 @@ def journal():
         else:
             stats = create_empty_stats()
 
-        # ADD: Calculate floating P&L from open positions
-        open_positions = pd.read_sql('SELECT * FROM trades WHERE status = "OPEN"', conn)
+        # ADD: Calculate floating P&L from open positions - CHANGED: Use hybrid dataframe fetch
+        open_positions = conn_fetch_dataframe(conn, 'SELECT * FROM trades WHERE status = "OPEN"')
         floating_pnl = open_positions['floating_pnl'].sum() if not open_positions.empty else 0
 
         # ADD: Calculate additional metrics for template - FIXED: Return lists not counts
@@ -2577,7 +3652,10 @@ def journal():
                            get_trade_status=get_trade_status)
 
 
-# ADD: Safe empty stats creation function
+# =============================================================================
+# ORIGINAL HELPER FUNCTIONS (UNCHANGED - MAINTAINED EXACTLY AS PROVIDED)
+# =============================================================================
+
 def create_empty_stats():
     """Create empty statistics with all required fields"""
     return {
@@ -2598,7 +3676,6 @@ def create_empty_stats():
     }
 
 
-# ADD: Template calculation functions - MUST BE DEFINED BEFORE THE ROUTE
 def calculate_planned_rr(trade):
     """Calculate planned risk/reward ratio"""
     try:
@@ -2655,14 +3732,14 @@ def get_trade_status(trade):
         return trade.get('status', 'UNKNOWN')
     except:
         return 'UNKNOWN'
-
-
+        
 # ======== ADD NEW TRADE COMMENT/DUPLICATE ROUTES RIGHT HERE ========
 # ======== PSYCHOLOGY LOG ROUTES ========
 
 @app.route('/psychology_log')
 @login_required
 def psychology_log():
+@hybrid_compatible 
     """Trading Psychology Log Dashboard"""
     # Create psychology logs table if it doesn't exist
     conn = get_db_connection()
@@ -2694,16 +3771,17 @@ def psychology_log():
 @app.route('/api/psychology_logs', methods=['GET', 'POST'])
 @login_required
 def psychology_logs_api():
-    """Psychology Logs API endpoint"""
+@hybrid_compatible 
+    """Psychology Logs API endpoint - HYBRID COMPATIBLE VERSION"""
     try:
-        conn = get_db_connection()
+        conn = get_universal_connection()  # CHANGED: Use universal connection
         cursor = conn.cursor()
 
         if request.method == 'POST':
-            # Save new psychology log
+            # Save new psychology log - CHANGED: Use universal_execute
             data = request.get_json()
 
-            cursor.execute('''
+            universal_execute(cursor, '''
                 INSERT INTO psychology_logs 
                 (user_id, trade_id, log_date, emotion_level, emotion_label, 
                  confidence_level, stress_level, discipline_level, thoughts, 
@@ -2729,8 +3807,8 @@ def psychology_logs_api():
             return jsonify(success=True, message='Psychology log saved successfully')
 
         else:
-            # Get psychology logs for current user
-            cursor.execute('''
+            # Get psychology logs for current user - CHANGED: Use universal_execute
+            universal_execute(cursor, '''
                 SELECT * FROM psychology_logs 
                 WHERE user_id = ? 
                 ORDER BY created_at DESC 
@@ -2739,7 +3817,7 @@ def psychology_logs_api():
 
             logs = cursor.fetchall()
 
-            # Convert to dictionary format
+            # Convert to dictionary format - ALL ORIGINAL LOGIC PRESERVED
             logs_dict = []
             for log in logs:
                 logs_dict.append({
@@ -2770,13 +3848,14 @@ def psychology_logs_api():
 @app.route('/api/psychology_stats')
 @login_required
 def psychology_stats():
-    """Psychology Statistics API"""
+@hybrid_compatible 
+    """Psychology Statistics API - HYBRID COMPATIBLE VERSION"""
     try:
-        conn = get_db_connection()
+        conn = get_universal_connection()  # CHANGED: Use universal connection
         cursor = conn.cursor()
 
-        # Get emotion distribution
-        cursor.execute('''
+        # Get emotion distribution - CHANGED: Use universal_execute
+        universal_execute(cursor, '''
             SELECT emotion_label, COUNT(*) as count 
             FROM psychology_logs 
             WHERE user_id = ? 
@@ -2785,8 +3864,8 @@ def psychology_stats():
 
         emotion_stats = cursor.fetchall()
 
-        # Get average metrics
-        cursor.execute('''
+        # Get average metrics - CHANGED: Use universal_execute
+        universal_execute(cursor, '''
             SELECT 
                 AVG(confidence_level) as avg_confidence,
                 AVG(stress_level) as avg_stress, 
@@ -2797,6 +3876,7 @@ def psychology_stats():
 
         avg_metrics = cursor.fetchone()
 
+        # ALL ORIGINAL CALCULATIONS AND LOGIC PRESERVED
         return jsonify({
             'emotion_distribution': dict(emotion_stats),
             'average_metrics': {
@@ -2951,16 +4031,17 @@ def duplicate_trade(ticket_id):
 # ... your existing trade_plan code (line 2530) ...
 
 # ======== DELETE ROUTE FIRST (MUST COME BEFORE TRADE_PLAN) ========
+
 # ======== TRADE PLAN MAIN ROUTE ========
 @app.route('/trade_plan', methods=['GET', 'POST'])
 @login_required
 def trade_plan():
-    """Professional trade planning"""
+    """Professional trade planning - HYBRID COMPATIBLE VERSION"""
     form = TradePlanForm()
 
     if request.method == 'POST':
         try:
-            conn = get_db_connection()
+            conn = get_universal_connection()  # CHANGED: Use universal connection
             cursor = conn.cursor()
 
             # Get data from HTML form fields
@@ -2975,8 +4056,8 @@ def trade_plan():
             status = request.form.get('status', 'pending')
             outcome = request.form.get('outcome', '')
 
-            # Insert into database with PROPER field names
-            cursor.execute('''
+            # Insert into database with PROPER field names - CHANGED: Use universal_execute
+            universal_execute(cursor, '''
                 INSERT INTO trade_plans 
                 (plan_date, symbol, strategy, timeframe, entry_conditions, exit_conditions, 
                  risk_percent, reward_percent, status, outcome, created_at)
@@ -3008,30 +4089,40 @@ def trade_plan():
             conn.close()
 
     # Get existing trade plans with PROPER field mapping
-    conn = get_db_connection()
+    conn = get_universal_connection()  # CHANGED: Use universal connection
     try:
         # First, let's check if we need to migrate the database schema
         cursor = conn.cursor()
 
-        # Check if new columns exist, if not, create them
+        # Check if new columns exist, if not, create them - CHANGED: Use universal_execute
         try:
-            cursor.execute(
+            universal_execute(cursor,
                 "SELECT strategy, timeframe, entry_conditions, exit_conditions, risk_percent, reward_percent FROM trade_plans LIMIT 1")
-        except sqlite3.OperationalError:
+        except Exception:  # CHANGED: Catch general exception for both databases
             # Migrate old schema to new schema
             add_log('INFO', 'Migrating trade_plans schema to new format', 'TradePlan')
-            cursor.execute('''
-                ALTER TABLE trade_plans ADD COLUMN strategy TEXT;
-                ALTER TABLE trade_plans ADD COLUMN timeframe TEXT;
-                ALTER TABLE trade_plans ADD COLUMN entry_conditions TEXT;
-                ALTER TABLE trade_plans ADD COLUMN exit_conditions TEXT;
-                ALTER TABLE trade_plans ADD COLUMN risk_percent REAL;
-                ALTER TABLE trade_plans ADD COLUMN reward_percent REAL;
-                ALTER TABLE trade_plans ADD COLUMN plan_date DATE;
-            ''')
+            
+            # Use universal_execute for all ALTER TABLE statements
+            alter_statements = [
+                'ALTER TABLE trade_plans ADD COLUMN strategy TEXT',
+                'ALTER TABLE trade_plans ADD COLUMN timeframe TEXT',
+                'ALTER TABLE trade_plans ADD COLUMN entry_conditions TEXT',
+                'ALTER TABLE trade_plans ADD COLUMN exit_conditions TEXT',
+                'ALTER TABLE trade_plans ADD COLUMN risk_percent REAL',
+                'ALTER TABLE trade_plans ADD COLUMN reward_percent REAL',
+                'ALTER TABLE trade_plans ADD COLUMN plan_date DATE'
+            ]
+            
+            for alter_stmt in alter_statements:
+                try:
+                    universal_execute(cursor, alter_stmt)
+                except Exception as alter_error:
+                    # Column might already exist, continue
+                    add_log('DEBUG', f'Column creation (may already exist): {alter_error}', 'TradePlan')
+                    continue
 
-            # Migrate existing data from old fields to new fields
-            cursor.execute('''
+            # Migrate existing data from old fields to new fields - CHANGED: Use universal_execute
+            universal_execute(cursor, '''
                 UPDATE trade_plans 
                 SET strategy = CASE 
                     WHEN trade_plan LIKE '% - %' THEN substr(trade_plan, 1, instr(trade_plan, ' - ') - 1)
@@ -3061,8 +4152,8 @@ def trade_plan():
             ''')
             conn.commit()
 
-        # Now query with proper field names
-        plans = pd.read_sql('''
+        # Now query with proper field names - CHANGED: Use conn_fetch_dataframe
+        plans = conn_fetch_dataframe(conn, '''
             SELECT 
                 id,
                 plan_date,
@@ -3078,7 +4169,7 @@ def trade_plan():
                 created_at
             FROM trade_plans 
             ORDER BY created_at DESC
-        ''', conn)
+        ''')
 
         plans_dict = plans.to_dict('records') if not plans.empty else []
 
@@ -3104,9 +4195,9 @@ def trade_plan():
 @app.route('/edit_trade_plan/<int:plan_id>', methods=['POST'])
 @login_required
 def edit_trade_plan(plan_id):
-    """Edit a trade plan"""
+    """Edit a trade plan - HYBRID COMPATIBLE VERSION"""
     try:
-        conn = get_db_connection()
+        conn = get_universal_connection()  # CHANGED: Use universal connection
         cursor = conn.cursor()
 
         # Get form data
@@ -3121,8 +4212,8 @@ def edit_trade_plan(plan_id):
         status = request.form.get('status', 'pending')
         outcome = request.form.get('outcome', '')
 
-        # Update the trade plan with PROPER field names
-        cursor.execute('''
+        # Update the trade plan with PROPER field names - CHANGED: Use universal_execute
+        universal_execute(cursor, '''
             UPDATE trade_plans SET
                 plan_date = ?, 
                 symbol = ?, 
@@ -3168,12 +4259,12 @@ def edit_trade_plan(plan_id):
 @app.route('/delete_trade_plan/<int:plan_id>')
 @login_required
 def delete_trade_plan(plan_id):
-    """Delete a trade plan"""
+    """Delete a trade plan - HYBRID COMPATIBLE VERSION"""
     try:
-        conn = get_db_connection()
+        conn = get_universal_connection()  # CHANGED: Use universal connection
         cursor = conn.cursor()
 
-        cursor.execute('DELETE FROM trade_plans WHERE id = ?', (plan_id,))
+        universal_execute(cursor, 'DELETE FROM trade_plans WHERE id = ?', (plan_id,))  # CHANGED: Use universal_execute
         conn.commit()
 
         flash('✅ Trade plan deleted successfully!', 'success')
@@ -3189,27 +4280,39 @@ def delete_trade_plan(plan_id):
     return redirect(url_for('trade_plan'))
 
 
-# Professional configuration page
+# ======== PROFESSIONAL HYBRID CONFIGURATIONS HYBRID MODEL ========
+
+# Professional configuration page - HYBRID COMPATIBLE
 from datetime import datetime
 import json
 
 
 @app.route('/configuration', methods=['GET', 'POST'])
 @login_required
+@hybrid_compatible  # ADDED: Hybrid compatibility
 def configuration():
-    """Professional configuration with comprehensive error handling"""
+    """Professional configuration with comprehensive error handling - HYBRID VERSION"""
+    
+    # Use hybrid environment detection
+    environment = detect_environment()
+    is_desktop = environment == 'sqlite'
+    is_web = environment == 'postgresql'
 
-    # Load saved settings with safe defaults
+    # Load saved settings with hybrid-aware path
     try:
-        with open('config.json', 'r') as f:
+        config_path = get_hybrid_config_path()
+        with open(config_path, 'r') as f:
             config_data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         config_data = {}
+        # Initialize with hybrid defaults
+        config_data = initialize_hybrid_config()
 
     # Ensure all required keys exist with safe defaults
-    config_data.setdefault('mt5_server', '')
-    config_data.setdefault('mt5_login', '')
-    config_data.setdefault('terminal_path', '')
+    config_data.setdefault('mt5', {}).setdefault('server', '')
+    config_data.setdefault('mt5', {}).setdefault('account', '')
+    config_data.setdefault('mt5', {}).setdefault('terminal_path', '')
+    config_data.setdefault('environment', environment)  # ADDED: Store environment
 
     if request.method == 'POST':
         # Check CSRF token first
@@ -3220,11 +4323,11 @@ def configuration():
         action = request.form.get('action')
 
         if action == 'connect_with_password':
-            # Handle password connection
+            # Handle password connection with hybrid awareness
             password = request.form.get('password')
-            server = config_data.get('mt5_server', '')
-            account = config_data.get('mt5_login', '')
-            terminal_path = config_data.get('terminal_path', '')
+            server = config_data.get('mt5', {}).get('server', '')
+            account = config_data.get('mt5', {}).get('account', '')
+            terminal_path = config_data.get('mt5', {}).get('terminal_path', '')
 
             if not all([password, server, account]):
                 flash('❌ Please fill all required fields: Server, Account, and Password', 'danger')
@@ -3242,19 +4345,35 @@ def configuration():
                     if success:
                         session['mt5_authenticated'] = True
                         session['mt5_password'] = password
-                        flash('✅ MT5 connected successfully!', 'success')
-                        add_log('INFO', f'MT5 connected to {server} - Account: {account}', 'Configuration')
+                        
+                        # ADDED: Hybrid-aware success message
+                        if is_desktop:
+                            flash('✅ MT5 connected successfully! (Desktop Mode)', 'success')
+                        else:
+                            flash('✅ MT5 connected successfully! (Web Mode)', 'success')
+                            
+                        add_log('INFO', f'MT5 connected to {server} - Account: {account} - Environment: {environment}', 'Configuration')
                     else:
                         error_msg = mt5.last_error() if MT5_AVAILABLE else "MT5 not available"
-                        flash(f'❌ Connection failed. Error: {error_msg}', 'danger')
-                        add_log('ERROR', f'MT5 connection failed: {error_msg}', 'Configuration')
+                        
+                        # ADDED: Hybrid-aware error handling
+                        if is_web:
+                            flash(f'❌ Web mode: Using demo data. MT5 Error: {error_msg}', 'warning')
+                        else:
+                            flash(f'❌ Connection failed. Error: {error_msg}', 'danger')
+                            
+                        add_log('ERROR', f'MT5 connection failed: {error_msg} - Environment: {environment}', 'Configuration')
 
                 except Exception as e:
-                    flash(f'❌ Connection error: {str(e)}', 'danger')
-                    add_log('ERROR', f'MT5 connection exception: {e}', 'Configuration')
+                    # ADDED: Hybrid error handling
+                    if is_web:
+                        flash('⚠️ Web mode: Using demo data. Connection not required.', 'info')
+                    else:
+                        flash(f'❌ Connection error: {str(e)}', 'danger')
+                    add_log('ERROR', f'MT5 connection exception: {e} - Environment: {environment}', 'Configuration')
 
         elif action == 'save_settings':
-            # Save server settings
+            # Save server settings with hybrid path
             server = request.form.get('server', '').strip()
             account = request.form.get('account', '').strip()
             terminal_path = request.form.get('terminal_path', '').strip()
@@ -3263,17 +4382,27 @@ def configuration():
                 try:
                     account_int = int(account)
 
-                    config_data.update({
-                        'mt5_server': server,
-                        'mt5_login': account_int,
+                    # UPDATE: Use proper nested structure
+                    if 'mt5' not in config_data:
+                        config_data['mt5'] = {}
+                    
+                    config_data['mt5'].update({
+                        'server': server,
+                        'account': account_int,
                         'terminal_path': terminal_path
                     })
+                    
+                    # ADDED: Save environment info
+                    config_data['environment'] = environment
+                    config_data['last_updated'] = datetime.now().isoformat()
 
-                    with open('config.json', 'w') as f:
+                    # UPDATE: Use hybrid config path
+                    config_path = get_hybrid_config_path()
+                    with open(config_path, 'w') as f:
                         json.dump(config_data, f, indent=4)
 
                     flash('✅ Server settings saved successfully!', 'success')
-                    add_log('INFO', f'MT5 settings saved: {account_int}@{server}', 'Configuration')
+                    add_log('INFO', f'MT5 settings saved: {account_int}@{server} - Environment: {environment}', 'Configuration')
 
                     # Clear connection state when settings change
                     session.pop('mt5_authenticated', None)
@@ -3294,19 +4423,72 @@ def configuration():
                 session.pop('mt5_authenticated', None)
                 session.pop('mt5_password', None)
                 flash('🔌 MT5 disconnected successfully', 'info')
-                add_log('INFO', 'MT5 disconnected by user', 'Configuration')
+                add_log('INFO', f'MT5 disconnected by user - Environment: {environment}', 'Configuration')
             except Exception as e:
                 flash(f'❌ Error disconnecting: {str(e)}', 'danger')
 
             return redirect(url_for('configuration'))
 
-    # Determine connection status
+        elif action == 'switch_mode':  # ADDED: Hybrid mode switching
+            # This would handle manual mode switching if needed
+            current_mode = "Desktop" if is_desktop else "Web"
+            flash(f'ℹ️ Currently in {current_mode} mode. Auto-detection is active.', 'info')
+            return redirect(url_for('configuration'))
+
+    # Determine connection status with hybrid awareness
     is_connected = mt5_manager.connected and session.get('mt5_authenticated', False)
+    
+    # ADDED: Enhanced status for template
+    connection_status = {
+        'connected': is_connected,
+        'environment': environment,
+        'is_desktop': is_desktop,
+        'is_web': is_web,
+        'demo_mode': not is_connected,
+        'mt5_available': MT5_AVAILABLE
+    }
 
     return render_template('configuration.html',
                            mt5_connected=is_connected,
-                           config=config_data,
-                           authenticated=session.get('mt5_authenticated', False))
+                           config=config_data.get('mt5', {}),  # Pass only MT5 config to template
+                           authenticated=session.get('mt5_authenticated', False),
+                           connection_status=connection_status,  # ADDED: Enhanced status
+                           environment=environment)  # ADDED: Environment info
+
+
+def get_hybrid_config_path():
+    """Get appropriate config path based on environment"""
+    environment = detect_environment()
+    
+    if environment == 'postgresql':
+        # Web environment - use current directory
+        return "config.json"
+    else:
+        # Desktop environment - use user config directory
+        if os.name == 'nt':  # Windows
+            config_dir = os.path.join(os.environ.get('APPDATA', ''), 'MT5Journal')
+        else:  # Linux/Mac
+            config_dir = os.path.join(os.path.expanduser('~'), '.config', 'mt5journal')
+        
+        os.makedirs(config_dir, exist_ok=True)
+        return os.path.join(config_dir, 'config.json')
+
+
+def initialize_hybrid_config():
+    """Initialize configuration with hybrid defaults"""
+    environment = detect_environment()
+    
+    return {
+        'mt5': {
+            'server': '',
+            'account': 0,
+            'terminal_path': 'C:\\Program Files\\MetaTrader 5\\terminal64.exe',
+            'password': ''  # Note: passwords should not be stored in plain text
+        },
+        'environment': environment,
+        'created_at': datetime.now().isoformat(),
+        'hybrid_mode': True
+    }
 
 
 def validate_csrf():
@@ -3316,99 +4498,161 @@ def validate_csrf():
         validate_csrf(request.form.get('csrf_token'))
         return True
     except:
-        return False# Pass current config to template
+        return False
 
 
 @app.route('/enter_password', methods=['GET', 'POST'])
 @login_required
+@hybrid_compatible  # ADDED: Hybrid compatibility
 def enter_password():
-    """Enter password for MT5 connection"""
+    """Enter password for MT5 connection - HYBRID VERSION"""
 
-    # Load saved settings
+    # Load saved settings with hybrid path
     try:
-        with open('config.json', 'r') as f:
+        config_path = get_hybrid_config_path()
+        with open(config_path, 'r') as f:
             config_data = json.load(f)
     except FileNotFoundError:
-        config_data = {}
+        config_data = initialize_hybrid_config()
 
     if request.method == 'POST':
         password = request.form.get('password')
+        environment = detect_environment()
 
         if password:
             # Test connection with entered password
-            if all(k in config_data for k in ['mt5_login', 'mt5_server']):
+            mt5_config = config_data.get('mt5', {})
+            if all(k in mt5_config for k in ['account', 'server']):
                 success = mt5_manager.initialize_connection(
-                    config_data['mt5_login'],
+                    mt5_config['account'],
                     password,
-                    config_data['mt5_server'],
-                    config_data.get('terminal_path', '')
+                    mt5_config['server'],
+                    mt5_config.get('terminal_path', '')
                 )
 
                 if success:
                     # Store password in session (encrypted by Flask)
                     session['mt5_authenticated'] = True
                     session['mt5_password'] = password  # Temporary session storage
-                    flash('Password accepted! MT5 connected.', 'success')
+                    
+                    # ADDED: Environment-specific message
+                    if environment == 'sqlite':
+                        flash('✅ Password accepted! MT5 connected in Desktop Mode.', 'success')
+                    else:
+                        flash('✅ Password accepted! MT5 connected in Web Mode.', 'success')
+                        
                     return redirect('/configuration')
                 else:
-                    flash('Connection failed. Check password and try again.', 'danger')
+                    # ADDED: Hybrid-aware error
+                    if environment == 'postgresql':
+                        flash('⚠️ Web mode: Using demo data. Live connection not required.', 'info')
+                    else:
+                        flash('❌ Connection failed. Check password and try again.', 'danger')
             else:
                 flash('No MT5 configuration found. Please set up server and account first.', 'danger')
 
     return render_template('enter_password.html',
-                           config=config_data)
+                           config=config_data.get('mt5', {}))
 
 
-# Debug routes
+# Debug routes - HYBRID COMPATIBLE
 @app.route('/debug/mt5_connection')
 @login_required
+@hybrid_compatible
 def debug_mt5_connection():
-    """Professional MT5 connection debug"""
+    """Professional MT5 connection debug - HYBRID VERSION"""
+    environment = detect_environment()
     status = mt5_manager.connected
-    message = f"MT5 {'Connected' if status else 'Not Connected'}"
+    message = f"MT5 {'Connected' if status else 'Not Connected'} - {environment.upper()} Mode"
     details = {
         'status': status,
         'message': message,
         'connection_attempts': mt5_manager.connection_attempts,
         'last_connection': mt5_manager.last_connection,
-        'mt5_available': MT5_AVAILABLE
+        'mt5_available': MT5_AVAILABLE,
+        'environment': environment,
+        'is_desktop': environment == 'sqlite',
+        'is_web': environment == 'postgresql',
+        'demo_mode': not status
     }
     return render_template('debug/mt5_connection.html', **details)
 
 
 @app.route('/debug/data_flow_test')
 @login_required
+@hybrid_compatible
 def debug_data_flow_test():
-    """Professional data flow test"""
-    return render_template('debug/data_flow_test.html')
+    """Professional data flow test - HYBRID VERSION"""
+    environment = detect_environment()
+    return render_template('debug/data_flow_test.html', 
+                          environment=environment,
+                          is_desktop=environment == 'sqlite')
 
 
 @app.route('/debug/import_test')
 @login_required
+@hybrid_compatible
 def debug_import_test():
-    """Professional import test"""
-    return render_template('debug/import_test.html')
+    """Professional import test - HYBRID VERSION"""
+    environment = detect_environment()
+    return render_template('debug/import_test.html',
+                          environment=environment,
+                          is_desktop=environment == 'sqlite')
 
 
 @app.route('/debug/force_correct_connection')
 @login_required
+@hybrid_compatible
 def debug_force_correct_connection():
-    """Force professional MT5 reconnection"""
+    """Force professional MT5 reconnection - HYBRID VERSION"""
+    environment = detect_environment()
     try:
+        # ADDED: Environment-aware reconnection
+        if environment == 'postgresql':
+            return jsonify({
+                'success': True, 
+                'message': 'Web mode - using demo data (reconnection not required)',
+                'environment': environment
+            })
+        
         success = mt5_manager.reconnect()
         if success:
-            add_log('INFO', 'Force reconnection successful', 'Debug')
-            return jsonify({'success': True, 'message': 'MT5 reconnected successfully'})
+            add_log('INFO', f'Force reconnection successful - Environment: {environment}', 'Debug')
+            return jsonify({
+                'success': True, 
+                'message': 'MT5 reconnected successfully',
+                'environment': environment
+            })
         else:
-            return jsonify({'success': False, 'message': 'MT5 reconnection failed'})
+            return jsonify({
+                'success': False, 
+                'message': 'MT5 reconnection failed',
+                'environment': environment
+            })
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({
+            'success': False, 
+            'message': str(e),
+            'environment': environment
+        })
 
 
 @app.route('/api/test_connection', methods=['POST'])
 @login_required
+@hybrid_compatible
 def test_connection():
-    """Test MT5 connection with detailed error reporting"""
+    """Test MT5 connection with detailed error reporting - HYBRID VERSION"""
+    environment = detect_environment()
+    
+    # ADDED: Early return for web mode
+    if environment == 'postgresql':
+        return jsonify({
+            'success': True,
+            'message': '✅ Web mode - demo data active (live connection not required)',
+            'environment': environment,
+            'demo_mode': True
+        })
+    
     try:
         account = request.form.get('account')
         password = request.form.get('password')
@@ -3418,7 +4662,8 @@ def test_connection():
         if not all([account, password, server]):
             return jsonify({
                 'success': False,
-                'error': 'Please fill all required fields: Account, Password, and Server'
+                'error': 'Please fill all required fields: Account, Password, and Server',
+                'environment': environment
             })
 
         # Validate account is numeric
@@ -3427,14 +4672,16 @@ def test_connection():
         except ValueError:
             return jsonify({
                 'success': False,
-                'error': 'Account number must be numeric'
+                'error': 'Account number must be numeric',
+                'environment': environment
             })
 
         # Test the connection
         if not MT5_AVAILABLE:
             return jsonify({
                 'success': False,
-                'error': 'MT5 platform not available. Running in demo mode.'
+                'error': 'MT5 platform not available. Running in demo mode.',
+                'environment': environment
             })
 
         # Initialize connection
@@ -3448,7 +4695,8 @@ def test_connection():
             error_msg = get_mt5_error_message(error_code)
             return jsonify({
                 'success': False,
-                'error': f'MT5 Error {error_code}: {error_msg}'
+                'error': f'MT5 Error {error_code}: {error_msg}',
+                'environment': environment
             })
 
         # Verify connection by getting account info
@@ -3464,13 +4712,15 @@ def test_connection():
                     'balance': account_info.balance,
                     'currency': account_info.currency,
                     'server': account_info.server
-                }
+                },
+                'environment': environment
             })
         else:
             mt5.shutdown()
             return jsonify({
                 'success': False,
-                'error': 'Connected but failed to retrieve account information'
+                'error': 'Connected but failed to retrieve account information',
+                'environment': environment
             })
 
     except Exception as e:
@@ -3479,14 +4729,16 @@ def test_connection():
             mt5.shutdown()
         return jsonify({
             'success': False,
-            'error': f'Connection test failed: {str(e)}'
+            'error': f'Connection test failed: {str(e)}',
+            'environment': environment
         })
+
 
 def get_mt5_error_message(error_code):
     """Get human-readable MT5 error messages"""
     error_messages = {
         10013: "Invalid account number",
-        10014: "Invalid password",
+        10014: "Invalid password", 
         10015: "Invalid server",
         10016: "Invalid terminal path",
         10017: "Trade context is busy",
@@ -3496,7 +4748,31 @@ def get_mt5_error_message(error_code):
     }
     return error_messages.get(error_code, f"MT5 error code: {error_code}")
 
-# Continue with other routes...
+
+# ADDED: Hybrid configuration API endpoint
+@app.route('/api/hybrid_status')
+@login_required
+def api_hybrid_status():
+    """Get current hybrid configuration status"""
+    environment = detect_environment()
+    config_path = get_hybrid_config_path()
+    
+    try:
+        with open(config_path, 'r') as f:
+            config_data = json.load(f)
+    except:
+        config_data = {}
+    
+    return jsonify({
+        'environment': environment,
+        'config_path': config_path,
+        'config_exists': os.path.exists(config_path),
+        'mt5_configured': bool(config_data.get('mt5', {}).get('server')),
+        'is_desktop': environment == 'sqlite',
+        'is_web': environment == 'postgresql',
+        'mt5_connected': mt5_manager.connected,
+        'demo_mode': not mt5_manager.connected
+    })
 
 # -----------------------------------------------------------------------------
 # PROFESSIONAL API ENDPOINTS
@@ -3818,6 +5094,7 @@ def export_pdf():
 @app.route('/risk_analysis')
 @login_required
 def risk_analysis():
+    @hybrid_compatible 
     """Comprehensive Risk Analysis Dashboard"""
     period = request.args.get('period', 'monthly')
 
@@ -3919,6 +5196,7 @@ def get_demo_trend_metrics():
 @app.route('/trend_analysis')
 @login_required
 def trend_analysis():
+    @hybrid_compatible 
     """Optimized Trend Analysis Dashboard"""
     period = request.args.get('period', 'monthly')
     is_demo_mode = not get_mt5_connection_status()
@@ -4719,6 +5997,7 @@ def generate_pattern_analysis_data(df):
 @app.route('/ai_qa')
 @login_required
 def ai_qa():
+    @hybrid_compatible 
     """Quantum Professional Journal AI Q&A Dashboard"""
     return render_template('ai_qa.html')
 
@@ -4726,6 +6005,7 @@ def ai_qa():
 @app.route('/api/ai/get_user_stats')
 @login_required
 def api_ai_user_stats():
+    @hybrid_compatible 
     """Get comprehensive user statistics for AI analysis"""
     try:
         conn = get_db_connection()
@@ -4781,6 +6061,7 @@ def api_ai_user_stats():
 @app.route('/api/ai/trade_analysis/<int:trade_id>')
 @login_required
 def api_ai_trade_analysis(trade_id):
+    @hybrid_compatible 
     """Get specific trade data for AI analysis"""
     try:
         conn = get_db_connection()
@@ -5443,6 +6724,67 @@ def debug_routes():
             'path': rule.rule
         })
     return jsonify(routes)
+
+# =============================================================================
+# LICENSE MANAGEMENT ROUTES
+# =============================================================================
+
+@app.route('/license', methods=['GET', 'POST'])
+@login_required
+def license_management():
+    """License management page"""
+    license_info = license_manager.get_license_info()
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'activate_license':
+            license_key = request.form.get('license_key', '').strip().upper()
+            if license_key:
+                success, message = license_manager.activate_license(license_key)
+                if success:
+                    flash(f'✅ {message}', 'success')
+                else:
+                    flash(f'❌ {message}', 'danger')
+            else:
+                flash('❌ Please enter a license key', 'danger')
+                
+        elif action == 'extend_trial':
+            # For demo purposes - in production this would require payment
+            flash('ℹ️ Trial extension requires license purchase', 'info')
+    
+    return render_template('license.html', 
+                         license_info=license_info,
+                         current_year=datetime.now().year)
+
+@app.route('/api/license/status')
+@login_required
+def api_license_status():
+    """API endpoint for license status"""
+    return jsonify(license_manager.get_license_info())
+
+@app.route('/api/license/activate', methods=['POST'])
+@login_required
+def api_activate_license():
+    """API endpoint for license activation"""
+    data = request.get_json()
+    license_key = data.get('license_key', '').strip().upper()
+    
+    if license_key:
+        success, message = license_manager.activate_license(license_key)
+        return jsonify({'success': success, 'message': message})
+    else:
+        return jsonify({'success': False, 'message': 'No license key provided'})
+
+@app.route('/api/license/validate')
+def api_validate_license():
+    """API endpoint for license validation (public)"""
+    is_valid, message = license_manager.validate_license()
+    return jsonify({
+        'valid': is_valid,
+        'message': message,
+        'trial_days_left': license_manager.get_trial_days_left()
+    })
 
 # -----------------------------------------------------------------------------
 # PROFESSIONAL SOCKETIO EVENT HANDLERS
