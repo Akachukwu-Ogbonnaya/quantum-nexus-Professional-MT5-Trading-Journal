@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Professional Psychological Log</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-dark: #0f172a;
+            --primary-color: #1e293b;
+            --secondary-color: #334155;
+            --accent-color: #3b82f6;
+            --accent-glow: #60a5fa;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --border-radius: 12px;
+            --shadow: 0 8px 32px rgba(0,0,0,0.2);
+            --neon-glow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .quantum-psychology {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .quantum-header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: var(--border-radius);
+            padding: 3rem 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quantum-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-color), var(--accent-glow));
+        }
+
+        .quantum-header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent-glow), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .quantum-header p {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            margin-bottom: 0;
+        }
+
+        .quantum-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .quantum-card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: var(--shadow), var(--neon-glow);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--accent-glow);
+            font-size: 0.95rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        /* Enhanced Emotion Scale */
+        .emotion-scale {
+            display: flex;
+            justify-content: space-between;
+            margin: 1rem 0;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .emotion-item {
+            text-align: center;
+            flex: 1;
+            padding: 1rem 0.5rem;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            background: rgba(30, 41, 59, 0.6);
+            margin: 0 0.25rem;
+        }
+
+        .emotion-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .emotion-item.selected {
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-glow));
+            color: white;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: var(--neon-glow);
+        }
+
+        .emotion-emoji {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .emotion-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Enhanced Psychology Factors */
+        .psychology-factors {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .factor-checkbox {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .factor-checkbox:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .factor-checkbox input {
+            width: auto;
+            margin-right: 0.75rem;
+        }
+
+        /* Enhanced Mindset Metrics */
+        .mindset-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin: 1rem 0;
+        }
+
+        .metric-slider {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent-glow);
+            margin: 0.5rem 0;
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+        }
+
+        input[type="range"] {
+            background: transparent;
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+
+        .metric-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+
+        /* Enhanced Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        .quantum-btn {
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-glow));
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quantum-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+        }
+
+        .quantum-btn-secondary {
+            background: transparent;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--accent-glow);
+        }
+
+        .quantum-btn-secondary:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        /* Enhanced Recent Entries */
+        .entries-grid {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .entry-card {
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.6);
+            border-left: 4px solid var(--accent-color);
+            border-radius: var(--border-radius);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .entry-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: var(--neon-glow);
+        }
+
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .entry-emotion {
+            font-size: 1.8rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .entry-date {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .entry-factors {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .factor-tag {
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-glow));
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #94a3b8;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #475569;
+            opacity: 0.5;
+        }
+
+        /* Review Tabs */
+        .review-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 0.5rem;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .review-tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .review-tab:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-glow);
+        }
+
+        .review-tab.active {
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-glow));
+            color: white;
+            box-shadow: var(--neon-glow);
+        }
+
+        .review-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .review-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Review-specific styles */
+        .review-summary {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            margin-bottom: 1.5rem;
+        }
+
+        .review-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .review-metric {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .review-metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--accent-glow);
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+        }
+
+        .review-metric-label {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .review-chart {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            margin: 1.5rem 0;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .review-section {
+            margin-bottom: 2rem;
+        }
+
+        .review-section h4 {
+            color: var(--accent-glow);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .review-section h4 i {
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .emotion-scale {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .psychology-factors {
+                grid-template-columns: 1fr;
+            }
+
+            .mindset-metrics {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .quantum-btn {
+                width: 100%;
+            }
+
+            .review-tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="quantum-psychology">
+        <!-- Quantum Header -->
+        <div class="quantum-header">
+            <h1><i class="fas fa-brain"></i> Quantum Professional Psychological Log</h1>
+            <p>Master your mindset for institutional-grade trading performance</p>
+        </div>
+
+        <!-- Review Tabs -->
+        <div class="review-tabs">
+            <button class="review-tab active" data-tab="daily">Daily Log</button>
+            <button class="review-tab" data-tab="weekend">Weekend Review</button>
+            <button class="review-tab" data-tab="monthly">Month End Review</button>
+        </div>
+
+        <!-- Daily Psychology Log Form -->
+        <div id="daily" class="review-content active">
+            <div class="quantum-card">
+                <form id="psychologyForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="tradeId"><i class="fas fa-tag me-2"></i>Trade ID / Symbol</label>
+                            <input type="text" id="tradeId" placeholder="e.g., EURUSD-001 or 123456" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tradeDate"><i class="fas fa-calendar me-2"></i>Trade Date & Time</label>
+                            <input type="datetime-local" id="tradeDate" required>
+                        </div>
+                    </div>
+
+                    <!-- Emotional State -->
+                    <div class="form-group">
+                        <label><i class="fas fa-heart me-2"></i>Overall Emotional State</label>
+                        <div class="emotion-scale" id="emotionScale">
+                            <div class="emotion-item" data-value="1">
+                                <div class="emotion-emoji">😫</div>
+                                <div class="emotion-label">Panicked</div>
+                            </div>
+                            <div class="emotion-item" data-value="2">
+                                <div class="emotion-emoji">😟</div>
+                                <div class="emotion-label">Anxious</div>
+                            </div>
+                            <div class="emotion-item" data-value="3">
+                                <div class="emotion-emoji">😐</div>
+                                <div class="emotion-label">Neutral</div>
+                            </div>
+                            <div class="emotion-item" data-value="4">
+                                <div class="emotion-emoji">😊</div>
+                                <div class="emotion-label">Confident</div>
+                            </div>
+                            <div class="emotion-item" data-value="5">
+                                <div class="emotion-emoji">😎</div>
+                                <div class="emotion-label">Focused</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Psychology Factors -->
+                    <div class="form-group">
+                        <label><i class="fas fa-chess me-2"></i>Psychology Factors</label>
+                        <div class="psychology-factors">
+                            <label class="factor-checkbox">
+                                <input type="checkbox" name="factors" value="fear_of_missing_out">
+                                <i class="fas fa-running me-2"></i>Fear of Missing Out
+                            </label>
+                            <label class="factor-checkbox">
+                                <input type="checkbox" name="factors" value="revenge_trading">
+                                <i class="fas fa-fist-raised me-2"></i>Revenge Trading
+                            </label>
+                            <label class="factor-checkbox">
+                                <input type="checkbox" name="factors" value="overconfidence">
+                                <i class="fas fa-crown me-2"></i>Overconfidence
+                            </label>
+                            <label class="factor-checkbox">
+                                <input type="checkbox" name="factors" value="analysis_paralysis">
+                                <i class="fas fa-search me-2"></i>Analysis Paralysis
+                            </label>
+                            <label class="factor-checkbox">
+                                <input type="checkbox" name="factors" value="impulsive">
+                                <i class="fas fa-bolt me-2"></i>Impulsive Decision
+                            </label>
+                            <label class="factor-checkbox">
+                                <input type="checkbox" name="factors" value="disciplined">
+                                <i class="fas fa-tasks me-2"></i>Disciplined Approach
+                            </label>
+                            <label class="factor-checkbox">
+                                <input type="checkbox" name="factors" value="patient">
+                                <i class="fas fa-hourglass-half me-2"></i>Patient Waiting
+                            </label>
+                            <label class="factor-checkbox">
+                                <input type="checkbox" name="factors" value="following_plan">
+                                <i class="fas fa-map me-2"></i>Following Trading Plan
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Mindset Metrics -->
+                    <div class="form-group">
+                        <label><i class="fas fa-chart-line me-2"></i>Mindset Metrics</label>
+                        <div class="mindset-metrics">
+                            <div class="metric-slider">
+                                <label>Confidence Level</label>
+                                <div class="metric-value" id="confidenceValue">5</div>
+                                <input type="range" id="confidence" min="1" max="10" value="5">
+                                <div class="metric-labels">
+                                    <span><i class="fas fa-arrow-down"></i> Low</span>
+                                    <span>High <i class="fas fa-arrow-up"></i></span>
+                                </div>
+                            </div>
+
+                            <div class="metric-slider">
+                                <label>Stress Level</label>
+                                <div class="metric-value" id="stressValue">5</div>
+                                <input type="range" id="stress" min="1" max="10" value="5">
+                                <div class="metric-labels">
+                                    <span><i class="fas fa-smile"></i> Calm</span>
+                                    <span>Stressed <i class="fas fa-tired"></i></span>
+                                </div>
+                            </div>
+
+                            <div class="metric-slider">
+                                <label>Discipline Level</label>
+                                <div class="metric-value" id="disciplineValue">5</div>
+                                <input type="range" id="discipline" min="1" max="10" value="5">
+                                <div class="metric-labels">
+                                    <span><i class="fas fa-times"></i> Weak</span>
+                                    <span>Strong <i class="fas fa-check"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thoughts & Reflections -->
+                    <div class="form-group">
+                        <label for="thoughts"><i class="fas fa-lightbulb me-2"></i>Thoughts & Reflections</label>
+                        <textarea id="thoughts" placeholder="What cognitive processes were active during this trade? Any mental breakthroughs or realizations?"></textarea>
+                    </div>
+
+                    <!-- Improvement Areas -->
+                    <div class="form-group">
+                        <label for="improvement"><i class="fas fa-rocket me-2"></i>Areas for Improvement</label>
+                        <textarea id="improvement" placeholder="What mental adjustments could enhance future trading performance?"></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <button type="button" class="quantum-btn quantum-btn-secondary" onclick="clearForm()">
+                            <i class="fas fa-eraser me-2"></i>Clear Form
+                        </button>
+                        <button type="submit" class="quantum-btn">
+                            <i class="fas fa-save me-2"></i>Save Psychology Log
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Recent Entries -->
+            <div class="quantum-card">
+                <h3><i class="fas fa-history me-2"></i>Recent Psychology Logs</h3>
+                <div class="entries-grid" id="recentEntries">
+                    <div class="empty-state">
+                        <i class="fas fa-brain"></i>
+                        <h4>No Psychology Logs Yet</h4>
+                        <p>Start building your mental trading edge by creating your first psychology log above.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekend Review -->
+        <div id="weekend" class="review-content">
+            <div class="quantum-card">
+                <h3><i class="fas fa-calendar-week me-2"></i>Weekend Psychological Review</h3>
+                <p class="mb-4">Comprehensive analysis of your trading psychology over the past week</p>
+
+                <div class="review-summary">
+                    <h4><i class="fas fa-chart-pie"></i> Weekly Summary</h4>
+                    <div class="review-metrics">
+                        <div class="review-metric">
+                            <div class="review-metric-value" id="weeklyEmotionScore">7.2</div>
+                            <div class="review-metric-label">Avg Emotional Score</div>
+                        </div>
+                        <div class="review-metric">
+                            <div class="review-metric-value" id="weeklyConfidence">6.8</div>
+                            <div class="review-metric-label">Avg Confidence</div>
+                        </div>
+                        <div class="review-metric">
+                            <div class="review-metric-value" id="weeklyStress">5.4</div>
+                            <div class="review-metric-label">Avg Stress Level</div>
+                        </div>
+                        <div class="review-metric">
+                            <div class="review-metric-value" id="weeklyDiscipline">7.5</div>
+                            <div class="review-metric-label">Avg Discipline</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="review-chart">
+                    <p class="text-center mb-0"><i class="fas fa-chart-bar me-2"></i>Weekly Emotional State Distribution</p>
+                    <canvas id="weekendEmotionChart" width="400" height="200"></canvas>
+                </div>
+
+                <div class="review-section">
+                    <h4><i class="fas fa-lightbulb"></i> Weekly Insights</h4>
+                    <div class="form-group">
+                        <label>Key Psychological Patterns Observed</label>
+                        <textarea id="weekendPatterns" placeholder="What recurring psychological patterns did you notice this week?"></textarea>
+                    </div>
+                </div>
+
+                <div class="review-section">
+                    <h4><i class="fas fa-trophy"></i> Psychological Wins</h4>
+                    <div class="form-group">
+                        <label>What went well mentally this week?</label>
+                        <textarea id="weekendWins" placeholder="Celebrate your mental trading victories..."></textarea>
+                    </div>
+                </div>
+
+                <div class="review-section">
+                    <h4><i class="fas fa-tools"></i> Areas for Improvement</h4>
+                    <div class="form-group">
+                        <label>What psychological adjustments will you focus on next week?</label>
+                        <textarea id="weekendImprovements" placeholder="Identify specific mental adjustments for the coming week..."></textarea>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button type="button" class="quantum-btn quantum-btn-secondary" onclick="clearWeekendReview()">
+                        <i class="fas fa-eraser me-2"></i>Clear Review
+                    </button>
+                    <button type="button" class="quantum-btn" onclick="saveWeekendReview()">
+                        <i class="fas fa-save me-2"></i>Save Weekend Review
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Month End Review -->
+        <div id="monthly" class="review-content">
+            <div class="quantum-card">
+                <h3><i class="fas fa-calendar-alt me-2"></i>Month End Psychological Review</h3>
+                <p class="mb-4">Deep analysis of your trading psychology trends over the past month</p>
+
+                <div class="review-summary">
+                    <h4><i class="fas fa-chart-line"></i> Monthly Overview</h4>
+                    <div class="review-metrics">
+                        <div class="review-metric">
+                            <div class="review-metric-value" id="monthlyEmotionScore">7.5</div>
+                            <div class="review-metric-label">Avg Emotional Score</div>
+                        </div>
+                        <div class="review-metric">
+                            <div class="review-metric-value" id="monthlyConfidence">7.2</div>
+                            <div class="review-metric-label">Avg Confidence</div>
+                        </div>
+                        <div class="review-metric">
+                            <div class="review-metric-value" id="monthlyStress">4.8</div>
+                            <div class="review-metric-label">Avg Stress Level</div>
+                        </div>
+                        <div class="review-metric">
+                            <div class="review-metric-value" id="monthlyDiscipline">7.8</div>
+                            <div class="review-metric-label">Avg Discipline</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="review-chart">
+                    <p class="text-center mb-0"><i class="fas fa-chart-line me-2"></i>Monthly Psychology Trend</p>
+                    <canvas id="monthlyTrendChart" width="400" height="200"></canvas>
+                </div>
+
+                <div class="review-section">
+                    <h4><i class="fas fa-brain"></i> Mindset Evolution</h4>
+                    <div class="form-group">
+                        <label>How has your trading psychology evolved this month?</label>
+                        <textarea id="monthlyEvolution" placeholder="Describe your psychological growth and development..."></textarea>
+                    </div>
+                </div>
+
+                <div class="review-section">
+                    <h4><i class="fas fa-chess-queen"></i> Strategic Psychological Insights</h4>
+                    <div class="form-group">
+                        <label>What key psychological insights will inform your trading next month?</label>
+                        <textarea id="monthlyInsights" placeholder="Document strategic psychological realizations..."></textarea>
+                    </div>
+                </div>
+
+                <div class="review-section">
+                    <h4><i class="fas fa-bullseye"></i> Next Month's Psychological Goals</h4>
+                    <div class="form-group">
+                        <label>Set specific psychological goals for the coming month</label>
+                        <textarea id="monthlyGoals" placeholder="Define clear, measurable psychological objectives..."></textarea>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button type="button" class="quantum-btn quantum-btn-secondary" onclick="clearMonthlyReview()">
+                        <i class="fas fa-eraser me-2"></i>Clear Review
+                    </button>
+                    <button type="button" class="quantum-btn" onclick="saveMonthlyReview()">
+                        <i class="fas fa-save me-2"></i>Save Monthly Review
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Initialize current date/time
+        document.getElementById('tradeDate').value = new Date().toISOString().slice(0, 16);
+
+        // Tab switching functionality
+        const reviewTabs = document.querySelectorAll('.review-tab');
+        const reviewContents = document.querySelectorAll('.review-content');
+
+        reviewTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.getAttribute('data-tab');
+
+                // Update active tab
+                reviewTabs.forEach(t => t.classList.remove('active'));
+                reviewContents.forEach(c => c.classList.remove('active'));
+
+                tab.classList.add('active');
+                document.getElementById(targetTab).classList.add('active');
+
+                // Load specific data for each tab
+                if (targetTab === 'weekend') {
+                    loadWeekendReview();
+                } else if (targetTab === 'monthly') {
+                    loadMonthlyReview();
+                }
+            });
+        });
+
+        // Emotion scale selection
+        const emotionItems = document.querySelectorAll('.emotion-item');
+        let selectedEmotion = null;
+
+        emotionItems.forEach(item => {
+            item.addEventListener('click', () => {
+                emotionItems.forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+                selectedEmotion = {
+                    level: item.getAttribute('data-value'),
+                    label: item.querySelector('.emotion-label').textContent,
+                    emoji: item.querySelector('.emotion-emoji').textContent
+                };
+            });
+        });
+
+        // Slider value updates
+        const sliders = ['confidence', 'stress', 'discipline'];
+        sliders.forEach(sliderId => {
+            const slider = document.getElementById(sliderId);
+            const valueDisplay = document.getElementById(sliderId + 'Value');
+
+            slider.addEventListener('input', () => {
+                valueDisplay.textContent = slider.value;
+                // Add color change based on value
+                const value = parseInt(slider.value);
+                if (value <= 3) {
+                    valueDisplay.style.color = '#ef4444'; // Red for low
+                } else if (value <= 7) {
+                    valueDisplay.style.color = '#f59e0b'; // Yellow for medium
+                } else {
+                    valueDisplay.style.color = '#10b981'; // Green for high
+                }
+            });
+
+            // Initialize colors
+            slider.dispatchEvent(new Event('input'));
+        });
+
+        // Form submission with backend integration
+        document.getElementById('psychologyForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await savePsychologyLog();
+        });
+
+        async function savePsychologyLog() {
+            if (!selectedEmotion) {
+                showNotification('Please select your emotional state', 'warning');
+                return;
+            }
+
+            const selectedFactors = Array.from(document.querySelectorAll('input[name="factors"]:checked'))
+                .map(checkbox => checkbox.value);
+
+            const logData = {
+                trade_id: document.getElementById('tradeId').value,
+                log_date: document.getElementById('tradeDate').value,
+                emotion_level: parseInt(selectedEmotion.level),
+                emotion_label: selectedEmotion.label,
+                confidence_level: parseInt(document.getElementById('confidence').value),
+                stress_level: parseInt(document.getElementById('stress').value),
+                discipline_level: parseInt(document.getElementById('discipline').value),
+                thoughts: document.getElementById('thoughts').value,
+                improvement_areas: document.getElementById('improvement').value,
+                psychology_factors: selectedFactors
+            };
+
+            try {
+                const response = await fetch('/api/psychology_logs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(logData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification('Psychology log saved successfully!', 'success');
+                    clearForm();
+                    loadRecentEntries();
+                } else {
+                    showNotification('Error saving log: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                // Fallback to localStorage if API fails
+                saveToLocalStorage(logData);
+            }
+        }
+
+        function saveToLocalStorage(logData) {
+            let logs = JSON.parse(localStorage.getItem('quantum_psychology_logs') || '[]');
+            logs.unshift({
+                ...logData,
+                id: Date.now(),
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem('quantum_psychology_logs', JSON.stringify(logs));
+            showNotification('Psychology log saved locally!', 'success');
+            clearForm();
+            loadRecentEntries();
+        }
+
+        async function loadRecentEntries() {
+            try {
+                const response = await fetch('/api/psychology_logs');
+                const result = await response.json();
+
+                if (result.logs) {
+                    displayEntries(result.logs);
+                } else {
+                    // Fallback to localStorage
+                    const localLogs = JSON.parse(localStorage.getItem('quantum_psychology_logs') || '[]');
+                    displayEntries(localLogs);
+                }
+            } catch (error) {
+                // Fallback to localStorage
+                const localLogs = JSON.parse(localStorage.getItem('quantum_psychology_logs') || '[]');
+                displayEntries(localLogs);
+            }
+        }
+
+        function displayEntries(logs) {
+            const entriesContainer = document.getElementById('recentEntries');
+
+            if (logs.length === 0) {
+                entriesContainer.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-brain"></i>
+                        <h4>No Psychology Logs Yet</h4>
+                        <p>Start building your mental trading edge by creating your first psychology log above.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            entriesContainer.innerHTML = '';
+
+            logs.slice(0, 6).forEach(log => {
+                const emotionEmojis = ['😫', '😟', '😐', '😊', '😎'];
+                const emotionEmoji = emotionEmojis[log.emotion_level - 1] || '😐';
+
+                const entryElement = document.createElement('div');
+                entryElement.className = 'entry-card';
+                entryElement.innerHTML = `
+                    <div class="entry-header">
+                        <div>
+                            <strong class="h5">${log.trade_id}</strong>
+                            <span class="entry-emotion">${emotionEmoji}</span>
+                        </div>
+                        <div class="entry-date">
+                            <i class="fas fa-clock me-1"></i>
+                            ${new Date(log.log_date).toLocaleDateString()}
+                            ${new Date(log.log_date).toLocaleTimeString()}
+                        </div>
+                    </div>
+
+                    <div class="entry-metrics mb-2">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small>Confidence</small>
+                                <div class="metric-value-small ${getMetricColor(log.confidence_level)}">${log.confidence_level}/10</div>
+                            </div>
+                            <div class="col-4">
+                                <small>Stress</small>
+                                <div class="metric-value-small ${getMetricColor(10 - log.stress_level)}">${log.stress_level}/10</div>
+                            </div>
+                            <div class="col-4">
+                                <small>Discipline</small>
+                                <div class="metric-value-small ${getMetricColor(log.discipline_level)}">${log.discipline_level}/10</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${log.psychology_factors && log.psychology_factors.length > 0 ? `
+                        <div class="entry-factors">
+                            ${log.psychology_factors.map(factor =>
+                                `<span class="factor-tag">${formatFactorName(factor)}</span>`
+                            ).join('')}
+                        </div>
+                    ` : ''}
+
+                    ${log.thoughts ? `
+                        <div class="mt-2">
+                            <strong><i class="fas fa-lightbulb me-1"></i>Thoughts:</strong>
+                            <p class="mb-0 mt-1">${log.thoughts}</p>
+                        </div>
+                    ` : ''}
+
+                    ${log.improvement_areas ? `
+                        <div class="mt-2">
+                            <strong><i class="fas fa-rocket me-1"></i>Improvement:</strong>
+                            <p class="mb-0 mt-1">${log.improvement_areas}</p>
+                        </div>
+                    ` : ''}
+                `;
+                entriesContainer.appendChild(entryElement);
+            });
+        }
+
+        // Weekend Review Functions
+        function loadWeekendReview() {
+            // Load data from localStorage or API
+            const logs = JSON.parse(localStorage.getItem('quantum_psychology_logs') || '[]');
+
+            // Calculate weekly averages
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+
+            const weeklyLogs = logs.filter(log => new Date(log.log_date) >= weekAgo);
+
+            if (weeklyLogs.length > 0) {
+                const avgEmotion = weeklyLogs.reduce((sum, log) => sum + log.emotion_level, 0) / weeklyLogs.length;
+                const avgConfidence = weeklyLogs.reduce((sum, log) => sum + log.confidence_level, 0) / weeklyLogs.length;
+                const avgStress = weeklyLogs.reduce((sum, log) => sum + log.stress_level, 0) / weeklyLogs.length;
+                const avgDiscipline = weeklyLogs.reduce((sum, log) => sum + log.discipline_level, 0) / weeklyLogs.length;
+
+                document.getElementById('weeklyEmotionScore').textContent = avgEmotion.toFixed(1);
+                document.getElementById('weeklyConfidence').textContent = avgConfidence.toFixed(1);
+                document.getElementById('weeklyStress').textContent = avgStress.toFixed(1);
+                document.getElementById('weeklyDiscipline').textContent = avgDiscipline.toFixed(1);
+            }
+
+            // Load saved weekend review if exists
+            const weekendReview = JSON.parse(localStorage.getItem('quantum_weekend_review') || '{}');
+            if (weekendReview.patterns) document.getElementById('weekendPatterns').value = weekendReview.patterns;
+            if (weekendReview.wins) document.getElementById('weekendWins').value = weekendReview.wins;
+            if (weekendReview.improvements) document.getElementById('weekendImprovements').value = weekendReview.improvements;
+
+            // Initialize chart
+            initializeWeekendChart();
+        }
+
+        function saveWeekendReview() {
+            const weekendReview = {
+                patterns: document.getElementById('weekendPatterns').value,
+                wins: document.getElementById('weekendWins').value,
+                improvements: document.getElementById('weekendImprovements').value,
+                date: new Date().toISOString()
+            };
+
+            localStorage.setItem('quantum_weekend_review', JSON.stringify(weekendReview));
+            showNotification('Weekend review saved successfully!', 'success');
+        }
+
+        function clearWeekendReview() {
+            document.getElementById('weekendPatterns').value = '';
+            document.getElementById('weekendWins').value = '';
+            document.getElementById('weekendImprovements').value = '';
+        }
+
+        // Monthly Review Functions
+        function loadMonthlyReview() {
+            // Load data from localStorage or API
+            const logs = JSON.parse(localStorage.getItem('quantum_psychology_logs') || '[]');
+
+            // Calculate monthly averages
+            const monthAgo = new Date();
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+            const monthlyLogs = logs.filter(log => new Date(log.log_date) >= monthAgo);
+
+            if (monthlyLogs.length > 0) {
+                const avgEmotion = monthlyLogs.reduce((sum, log) => sum + log.emotion_level, 0) / monthlyLogs.length;
+                const avgConfidence = monthlyLogs.reduce((sum, log) => sum + log.confidence_level, 0) / monthlyLogs.length;
+                const avgStress = monthlyLogs.reduce((sum, log) => sum + log.stress_level, 0) / monthlyLogs.length;
+                const avgDiscipline = monthlyLogs.reduce((sum, log) => sum + log.discipline_level, 0) / monthlyLogs.length;
+
+                document.getElementById('monthlyEmotionScore').textContent = avgEmotion.toFixed(1);
+                document.getElementById('monthlyConfidence').textContent = avgConfidence.toFixed(1);
+                document.getElementById('monthlyStress').textContent = avgStress.toFixed(1);
+                document.getElementById('monthlyDiscipline').textContent = avgDiscipline.toFixed(1);
+            }
+
+            // Load saved monthly review if exists
+            const monthlyReview = JSON.parse(localStorage.getItem('quantum_monthly_review') || '{}');
+            if (monthlyReview.evolution) document.getElementById('monthlyEvolution').value = monthlyReview.evolution;
+            if (monthlyReview.insights) document.getElementById('monthlyInsights').value = monthlyReview.insights;
+            if (monthlyReview.goals) document.getElementById('monthlyGoals').value = monthlyReview.goals;
+
+            // Initialize chart
+            initializeMonthlyChart();
+        }
+
+        function saveMonthlyReview() {
+            const monthlyReview = {
+                evolution: document.getElementById('monthlyEvolution').value,
+                insights: document.getElementById('monthlyInsights').value,
+                goals: document.getElementById('monthlyGoals').value,
+                date: new Date().toISOString()
+            };
+
+            localStorage.setItem('quantum_monthly_review', JSON.stringify(monthlyReview));
+            showNotification('Monthly review saved successfully!', 'success');
+        }
+
+        function clearMonthlyReview() {
+            document.getElementById('monthlyEvolution').value = '';
+            document.getElementById('monthlyInsights').value = '';
+            document.getElementById('monthlyGoals').value = '';
+        }
+
+        // Chart initialization functions
+        function initializeWeekendChart() {
+            const ctx = document.getElementById('weekendEmotionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Panicked', 'Anxious', 'Neutral', 'Confident', 'Focused'],
+                    datasets: [{
+                        label: 'Emotion Distribution',
+                        data: [2, 5, 8, 12, 10],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.7)',
+                            'rgba(245, 158, 11, 0.7)',
+                            'rgba(148, 163, 184, 0.7)',
+                            'rgba(16, 185, 129, 0.7)',
+                            'rgba(59, 130, 246, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(148, 163, 184, 1)',
+                            'rgba(16, 185, 129, 1)',
+                            'rgba(59, 130, 246, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.1)'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.1)'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeMonthlyChart() {
+            const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [
+                        {
+                            label: 'Emotional Score',
+                            data: [6.8, 7.2, 7.5, 7.8],
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Confidence',
+                            data: [6.5, 7.0, 7.3, 7.5],
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#94a3b8'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 5,
+                            max: 10,
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.1)'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.1)'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getMetricColor(value) {
+            if (value <= 3) return 'metric-low';
+            if (value <= 7) return 'metric-medium';
+            return 'metric-high';
+        }
+
+        function formatFactorName(factor) {
+            const factorNames = {
+                'fear_of_missing_out': 'FOMO',
+                'revenge_trading': 'Revenge Trading',
+                'overconfidence': 'Overconfidence',
+                'analysis_paralysis': 'Analysis Paralysis',
+                'impulsive': 'Impulsive',
+                'disciplined': 'Disciplined',
+                'patient': 'Patient',
+                'following_plan': 'Following Plan'
+            };
+            return factorNames[factor] || factor;
+        }
+
+        function showNotification(message, type) {
+            // Create a simple notification
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle me-2"></i>
+                ${message}
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(notification);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
+
+        function clearForm() {
+            document.getElementById('psychologyForm').reset();
+            emotionItems.forEach(item => item.classList.remove('selected'));
+            selectedEmotion = null;
+            sliders.forEach(sliderId => {
+                document.getElementById(sliderId + 'Value').textContent = '5';
+                document.getElementById(sliderId).value = 5;
+                document.getElementById(sliderId).dispatchEvent(new Event('input'));
+            });
+            document.getElementById('tradeDate').value = new Date().toISOString().slice(0, 16);
+        }
+
+        // Add metric value styling
+        const style = document.createElement('style');
+        style.textContent = `
+            .metric-value-small {
+                font-weight: bold;
+                font-size: 0.9rem;
+                padding: 0.2rem 0.5rem;
+                border-radius: 4px;
+                display: inline-block;
+                min-width: 50px;
+            }
+            .metric-low { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+            .metric-medium { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+            .metric-high { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        `;
+        document.head.appendChild(style);
+
+        // Load recent entries on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRecentEntries();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1324 @@
+{% extends "base.html" %}
+
+{% block title %}Professional Dashboard - MT5 Trading Journal{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Real-time Status Bar -->
+    <div class="col-12">
+        <div class="realtime-update">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center">
+                        <div class="status-indicator me-3">
+                            {% if mt5_connected %}
+                            <i class="fas fa-circle text-success me-1" style="font-size: 8px;"></i>
+                            <span>MT5 Connected</span>
+                            {% else %}
+                            <i class="fas fa-circle text-warning me-1" style="font-size: 8px;"></i>
+                            <span>Demo Mode</span>
+                            {% endif %}
+                        </div>
+                        <div class="sync-status">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            <span>Auto-sync: 300s</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <span id="sync-status">Last update: <span id="last-sync-time">{{ current_time }}</span></span>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-light" onclick="forceSync()" title="Force Data Sync">
+                            <i class="fas fa-redo me-1"></i> Sync Now
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="loadAllData()" title="Refresh Data">
+                            <i class="fas fa-refresh me-1"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Synchronization Card -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">Data Synchronization</h6>
+        <div>
+            <button id="syncNowBtn" class="btn btn-success btn-sm">
+                <i class="fas fa-sync-alt"></i> Sync Now
+            </button>
+            <small class="text-muted ml-2" id="lastSyncText">
+                Last sync: {{ data_synchronizer.last_sync.strftime('%H:%M:%S') if data_synchronizer and data_synchronizer.last_sync else 'Never' }}
+            </small>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="h5 mb-0 text-primary" id="totalTrades">{{ stats.total_trades if stats else 0 }}</div>
+                    <div class="small text-muted">Total Trades</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="h5 mb-0 text-warning" id="openTrades">{{ open_positions|length if open_positions else 0 }}</div>
+                    <div class="small text-muted">Open Positions</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="h5 mb-0 text-info" id="syncStatus">
+                        {{ 'Synced' if data_synchronizer and data_synchronizer.last_sync else 'Never' }}
+                    </div>
+                    <div class="small text-muted">Sync Status</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="h5 mb-0 {{ 'text-success' if mt5_connected else 'text-danger' }}" id="mt5Status">
+                        {{ 'Connected' if mt5_connected else 'Disconnected' }}
+                    </div>
+                    <div class="small text-muted">MT5 Status</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Quick Stats Overview -->
+    <div class="col-12">
+        <div class="quick-actions">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="mb-0"><i class="fas fa-rocket me-2"></i>Trading Performance Overview</h5>
+                    <small class="text-muted">Real-time analytics and insights</small>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group">
+                        <a href="{{ url_for('export_csv') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-download me-1"></i> Export CSV
+                        </a>
+                        <a href="{{ url_for('journal') }}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-book me-1"></i> View Journal
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Status Alert -->
+{% if not stats %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-warning d-flex align-items-center">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <div>
+                <strong>No trading data available</strong> - Please sync your MT5 account or check your connection.
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Main Performance Metrics -->
+<div class="row mb-4">
+    <!-- Profit & Loss -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-number" id="net-profit">
+                        ${{ "%.2f"|format(stats.get('net_profit', 0) if stats else 0) }}
+                    </div>
+                    <div class="stat-label">NET PROFIT</div>
+                </div>
+                <div class="profit-change" id="profit-change">
+                    {% set net_profit = stats.get('net_profit', 0) if stats else 0 %}
+                    {% if net_profit > 0 %}
+                    <i class="fas fa-arrow-up text-success"></i>
+                    <span class="small text-success">+{{ "%.1f"|format((net_profit / (stats.get('starting_balance', 1) or 1)) * 100) }}%</span>
+                    {% elif net_profit < 0 %}
+                    <i class="fas fa-arrow-down text-danger"></i>
+                    <span class="small text-danger">{{ "%.1f"|format((net_profit / (stats.get('starting_balance', 1) or 1)) * 100) }}%</span>
+                    {% else %}
+                    <i class="fas fa-minus text-muted"></i>
+                    <span class="small text-muted">0.0%</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="progress" style="height: 6px;">
+                    {% set profit_ratio = (net_profit / (stats.get('gross_profit', 1) or 1)) * 100 %}
+                    <div class="progress-bar bg-success" style="width: {{ profit_ratio|abs }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Win Rate -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card info">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-number" id="win-rate">
+                        {{ "%.1f"|format(stats.get('win_rate', 0)) if stats else 0 }}%
+                    </div>
+                    <div class="stat-label">WIN RATE</div>
+                </div>
+                <div class="performance-badge">
+                    <span class="badge bg-info">
+                        {{ stats.get('winning_trades', 0) if stats else 0 }}/{{ stats.get('total_trades', 0) if stats else 0 }}
+                    </span>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="d-flex justify-content-between small text-muted">
+                    <span>Wins: {{ stats.get('winning_trades', 0) if stats else 0 }}</span>
+                    <span>Losses: {{ stats.get('losing_trades', 0) if stats else 0 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profit Factor -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card warning">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-number" id="profit-factor">
+                        {{ "%.2f"|format(stats.get('profit_factor', 0)) if stats else 0 }}
+                    </div>
+                    <div class="stat-label">PROFIT FACTOR</div>
+                </div>
+                <div class="risk-indicator">
+                    {% set profit_factor = stats.get('profit_factor', 0) if stats else 0 %}
+                    {% if profit_factor > 1.5 %}
+                    <span class="badge bg-success">Excellent</span>
+                    {% elif profit_factor > 1.0 %}
+                    <span class="badge bg-warning">Good</span>
+                    {% elif profit_factor > 0 %}
+                    <span class="badge bg-danger">Poor</span>
+                    {% else %}
+                    <span class="badge bg-secondary">N/A</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-balance-scale me-1"></i>
+                    Risk to Reward Efficiency
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Average Trade -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card primary">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-number" id="avg-trade">
+                        ${{ "%.2f"|format(stats.get('avg_trade', 0)) if stats else 0 }}
+                    </div>
+                    <div class="stat-label">AVG TRADE</div>
+                </div>
+                <div class="trade-volume">
+                    <small class="text-muted">{{ stats.get('total_trades', 0) if stats else 0 }} trades</small>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="d-flex justify-content-between small">
+                    <span class="text-success">Best: ${{ "%.0f"|format(stats.get('largest_win', 0)) if stats else 0 }}</span>
+                    <span class="text-danger">Worst: ${{ "%.0f"|format(stats.get('largest_loss', 0)) if stats else 0 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Equity Curve & Performance Charts -->
+    <div class="col-xl-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Equity Curve & Performance</h5>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary active" data-period="7d">7D</button>
+                    <button class="btn btn-outline-secondary" data-period="30d">30D</button>
+                    <button class="btn btn-outline-secondary" data-period="90d">90D</button>
+                    <button class="btn btn-outline-secondary" data-period="1y">1Y</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <canvas id="equityChart" height="250"></canvas>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="performance-metrics">
+                            <div class="metric-item mb-3">
+                                <div class="metric-label">Sharpe Ratio</div>
+                                <div class="metric-value" id="sharpe-ratio">
+                                    {{ "%.2f"|format(stats.get('sharpe_ratio', 0)) if stats else 0 }}
+                                </div>
+                            </div>
+                            <div class="metric-item mb-3">
+                                <div class="metric-label">Max Drawdown</div>
+                                <div class="metric-value {% if stats and stats.get('max_drawdown', 0) > 20 %}text-danger{% elif stats and stats.get('max_drawdown', 0) > 10 %}text-warning{% else %}text-success{% endif %}" id="max-drawdown">
+                                    {{ "%.1f"|format(stats.get('max_drawdown', 0)) if stats else 0 }}%
+                                </div>
+                            </div>
+                            <div class="metric-item mb-3">
+                                <div class="metric-label">Recovery Factor</div>
+                                <div class="metric-value" id="recovery-factor">
+                                    {{ "%.2f"|format(stats.get('recovery_factor', 0)) if stats else 0 }}
+                                </div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Expectancy</div>
+                                <div class="metric-value" id="expectancy">
+                                    ${{ "%.2f"|format(stats.get('expectancy', 0)) if stats else 0 }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Metrics Row -->
+                <div class="row mt-4">
+                    <div class="col-md-3 text-center">
+                        <div class="additional-metric">
+                            <div class="metric-label-small">Total Trades</div>
+                            <div class="metric-value-large">{{ stats.get('total_trades', 0) if stats else 0 }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="additional-metric">
+                            <div class="metric-label-small">Avg Win</div>
+                            <div class="metric-value-large text-success">${{ "%.0f"|format(stats.get('avg_win', 0)) if stats else 0 }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="additional-metric">
+                            <div class="metric-label-small">Avg Loss</div>
+                            <div class="metric-value-large text-danger">${{ "%.0f"|format(stats.get('avg_loss', 0)) if stats else 0 }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="additional-metric">
+                            <div class="metric-label-small">Profit/Loss Ratio</div>
+                            <div class="metric-value-large">{{ "%.2f"|format(stats.get('profit_loss_ratio', 0)) if stats else 0 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Summary & Calendar -->
+    <div class="col-xl-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-wallet me-2"></i>Account Summary</h5>
+                <span class="badge {% if account_data and account_data.get('equity', 0) > account_data.get('balance', 0) %}bg-success{% else %}bg-warning{% endif %}">
+                    {% if account_data and account_data.get('equity', 0) > account_data.get('balance', 0) %}
+                    <i class="fas fa-arrow-up me-1"></i>Profitable
+                    {% else %}
+                    <i class="fas fa-arrow-down me-1"></i>Drawdown
+                    {% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="account-summary">
+                    <div class="summary-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="summary-label">
+                                <i class="fas fa-piggy-bank me-2 text-success"></i>Balance:
+                            </span>
+                            <span class="summary-value" id="account-balance">
+                                ${{ "%.2f"|format(account_data.get('balance', 0)) if account_data else 0 }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="summary-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="summary-label">
+                                <i class="fas fa-chart-line me-2 text-primary"></i>Equity:
+                            </span>
+                            <span class="summary-value" id="account-equity">
+                                ${{ "%.2f"|format(account_data.get('equity', 0)) if account_data else 0 }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="summary-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="summary-label">
+                                <i class="fas fa-bolt me-2 text-warning"></i>Free Margin:
+                            </span>
+                            <span class="summary-value" id="free-margin">
+                                ${{ "%.2f"|format(account_data.get('free_margin', 0)) if account_data else 0 }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="summary-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="summary-label">
+                                <i class="fas fa-cogs me-2 text-info"></i>Margin Used:
+                            </span>
+                            <span class="summary-value" id="margin-used">
+                                ${{ "%.2f"|format(account_data.get('margin', 0)) if account_data else 0 }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="summary-label">
+                                <i class="fas fa-layer-group me-2 text-danger"></i>Open Positions:
+                            </span>
+                            <span class="summary-value badge bg-primary" id="open-positions">
+                                {{ open_positions|length if open_positions else 0 }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Risk Metrics -->
+                <div class="risk-metrics mt-4">
+                    <h6 class="mb-3"><i class="fas fa-shield-alt me-2"></i>Risk Management</h6>
+                    <div class="risk-item mb-2">
+                        <div class="d-flex justify-content-between">
+                            <small>Margin Level:</small>
+                            <small class="{% if account_data and account_data.get('margin_level', 0) > 500 %}text-success{% elif account_data and account_data.get('margin_level', 0) > 200 %}text-warning{% else %}text-danger{% endif %}">
+                                {{ "%.1f"|format(account_data.get('margin_level', 0)) if account_data else 0 }}%
+                            </small>
+                        </div>
+                        <div class="progress" style="height: 4px;">
+                            {% set margin_level = account_data.get('margin_level', 0) if account_data else 0 %}
+                            <div class="progress-bar
+                                {% if margin_level > 500 %}bg-success
+                                {% elif margin_level > 200 %}bg-warning
+                                {% else %}bg-danger{% endif %}"
+                                style="width: {{ [margin_level, 100]|min }}%">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="risk-item">
+                        <div class="d-flex justify-content-between">
+                            <small>Risk per Trade:</small>
+                            <small>{{ "%.1f"|format(stats.get('avg_risk_per_trade', 0)) if stats else 0 }}%</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mini Calendar -->
+                {% if calendar_data %}
+                <div class="calendar-section mt-4">
+                    <h6 class="mb-3"><i class="fas fa-calendar-alt me-2"></i>Monthly Performance</h6>
+                    <div class="calendar-mini">
+                        <div class="calendar-header mb-2 d-flex justify-content-between">
+                            <strong>{{ calendar_data.month_name }} {{ calendar_data.year }}</strong>
+                            <small class="text-{% if calendar_data.monthly_summary.total_pnl > 0 %}success{% else %}danger{% endif %}">
+                                ${{ "%.0f"|format(calendar_data.monthly_summary.total_pnl) }}
+                            </small>
+                        </div>
+                        <div class="calendar-grid">
+                            {% for week in calendar_data.calendar %}
+                                {% for day in week %}
+                                    <div class="calendar-day-mini {% if day and day.has_data %}{% if day.pnl > 0 %}day-profit{% elif day.pnl < 0 %}day-loss{% else %}day-neutral{% endif %}{% endif %}">
+                                        {% if day %}
+                                            {{ day.day }}
+                                            {% if day.has_data %}
+                                            <div class="day-pnl">${{ day.pnl|abs|int }}</div>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Trades -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Trades</h5>
+                <div>
+                    <span class="badge bg-secondary me-2">Last 10</span>
+                    <a href="{{ url_for('journal') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Symbol</th>
+                                <th>Type</th>
+                                <th>Volume</th>
+                                <th>Profit</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-trades">
+                            {% if recent_trades %}
+                                {% for trade in recent_trades %}
+                                <tr>
+                                   <td>{{ trade.entry_time.split(' ')[1][:5] if trade.entry_time and ' ' in trade.entry_time else 'N/A' }}</td>
+                                    <td><strong>{{ trade.symbol }}</strong></td>
+                                    <td>
+                                        <span class="badge {% if trade.type == 'BUY' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ trade.type }}
+                                        </span>
+                                    </td>
+                                    <td>{{ trade.volume }}</td>
+                                    <td class="{% if trade.profit > 0 %}text-success{% elif trade.profit < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                        ${{ "%.2f"|format(trade.profit) }}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if trade.status == 'CLOSED' %}bg-secondary{% else %}bg-warning{% endif %}">
+                                            {{ trade.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-2x mb-3"></i><br>
+                                        No recent trades found
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Open Positions -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Open Positions</h5>
+                <div>
+                    <span class="badge bg-primary">{{ open_positions|length }} positions</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Type</th>
+                                <th>Entry</th>
+                                <th>Current</th>
+                                <th>P&L</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="open-positions-table">
+                            {% if open_positions %}
+                                {% for position in open_positions %}
+                                <tr>
+                                    <td><strong>{{ position.symbol }}</strong></td>
+                                    <td>
+                                        <span class="badge {% if position.type == 'BUY' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ position.type }}
+                                        </span>
+                                    </td>
+                                    <td>{{ "%.5f"|format(position.entry_price) }}</td>
+                                    <td>{{ "%.5f"|format(position.current_price if position.current_price else position.entry_price) }}</td>
+                                    <td class="{% if position.floating_pnl > 0 %}text-success{% elif position.floating_pnl < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                        ${{ "%.2f"|format(position.floating_pnl) }}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="closePosition({{ position.ticket_id }})" title="Close Position">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="fas fa-chart-line fa-2x mb-3"></i><br>
+                                        No open positions
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Floating P&L Summary -->
+                {% if open_positions %}
+                <div class="mt-3 p-3 bg-light rounded">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <small class="text-muted">Total Floating P&L</small>
+                            <div class="{% if open_positions|sum(attribute='floating_pnl') > 0 %}text-success{% elif open_positions|sum(attribute='floating_pnl') < 0 %}text-danger{% endif %}">
+                                <strong>${{ "%.2f"|format(open_positions|sum(attribute='floating_pnl')) }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Risk Exposure</small>
+                            <div class="text-warning">
+                                <strong>${{ "%.2f"|format(open_positions|sum(attribute='volume') * 1000) }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Periods -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Performance Analytics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-2 mb-3">
+                        <div class="period-card">
+                            <div class="period-label">Today</div>
+                            <div class="period-value {% if stats and stats.get('today_pnl', 0) > 0 %}text-success{% else %}text-danger{% endif %}">
+                                ${{ "%.0f"|format(stats.get('today_pnl', 0)) if stats else 0 }}
+                            </div>
+                            <div class="period-change {% if stats and stats.get('today_pnl', 0) > 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if stats and stats.get('today_pnl', 0) > 0 %}+{% endif %}{{ "%.1f"|format(stats.get('today_change', 0)) if stats else 0 }}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="period-card">
+                            <div class="period-label">This Week</div>
+                            <div class="period-value {% if stats and stats.get('week_pnl', 0) > 0 %}text-success{% else %}text-danger{% endif %}">
+                                ${{ "%.0f"|format(stats.get('week_pnl', 0)) if stats else 0 }}
+                            </div>
+                            <div class="period-change {% if stats and stats.get('week_pnl', 0) > 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if stats and stats.get('week_pnl', 0) > 0 %}+{% endif %}{{ "%.1f"|format(stats.get('week_change', 0)) if stats else 0 }}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="period-card">
+                            <div class="period-label">This Month</div>
+                            <div class="period-value {% if stats and stats.get('month_pnl', 0) > 0 %}text-success{% else %}text-danger{% endif %}">
+                                ${{ "%.0f"|format(stats.get('month_pnl', 0)) if stats else 0 }}
+                            </div>
+                            <div class="period-change {% if stats and stats.get('month_pnl', 0) > 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if stats and stats.get('month_pnl', 0) > 0 %}+{% endif %}{{ "%.1f"|format(stats.get('month_change', 0)) if stats else 0 }}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="period-card">
+                            <div class="period-label">3 Months</div>
+                            <div class="period-value {% if stats and stats.get('quarter_pnl', 0) > 0 %}text-success{% else %}text-danger{% endif %}">
+                                ${{ "%.0f"|format(stats.get('quarter_pnl', 0)) if stats else 0 }}
+                            </div>
+                            <div class="period-change {% if stats and stats.get('quarter_pnl', 0) > 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if stats and stats.get('quarter_pnl', 0) > 0 %}+{% endif %}{{ "%.1f"|format(stats.get('quarter_change', 0)) if stats else 0 }}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="period-card">
+                            <div class="period-label">6 Months</div>
+                            <div class="period-value {% if stats and stats.get('half_year_pnl', 0) > 0 %}text-success{% else %}text-danger{% endif %}">
+                                ${{ "%.0f"|format(stats.get('half_year_pnl', 0)) if stats else 0 }}
+                            </div>
+                            <div class="period-change {% if stats and stats.get('half_year_pnl', 0) > 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if stats and stats.get('half_year_pnl', 0) > 0 %}+{% endif %}{{ "%.1f"|format(stats.get('half_year_change', 0)) if stats else 0 }}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <div class="period-card">
+                            <div class="period-label">1 Year</div>
+                            <div class="period-value {% if stats and stats.get('year_pnl', 0) > 0 %}text-success{% else %}text-danger{% endif %}">
+                                ${{ "%.0f"|format(stats.get('year_pnl', 0)) if stats else 0 }}
+                            </div>
+                            <div class="period-change {% if stats and stats.get('year_pnl', 0) > 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if stats and stats.get('year_pnl', 0) > 0 %}+{% endif %}{{ "%.1f"|format(stats.get('year_change', 0)) if stats else 0 }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.stat-card {
+    padding: 20px;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    border-left: 4px solid;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+.stat-card.success { border-left-color: #28a745; }
+.stat-card.info { border-left-color: #17a2b8; }
+.stat-card.warning { border-left-color: #ffc107; }
+.stat-card.primary { border-left-color: #007bff; }
+.stat-card.danger { border-left-color: #dc3545; }
+
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.metric-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.metric-item:last-child {
+    border-bottom: none;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.metric-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.metric-label-small {
+    font-size: 0.7rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.metric-value-large {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-top: 5px;
+}
+
+.additional-metric {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+
+.calendar-day-mini {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    position: relative;
+    background: #f8f9fa;
+    font-weight: 500;
+}
+
+.day-profit {
+    background: rgba(40, 167, 69, 0.15);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.day-loss {
+    background: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.day-neutral {
+    background: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+}
+
+.day-pnl {
+    position: absolute;
+    bottom: -6px;
+    font-size: 0.5rem;
+    font-weight: 700;
+}
+
+.period-card {
+    padding: 20px 15px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    border: 1px solid #e9ecef;
+}
+
+.period-card:hover {
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.period-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.period-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 5px;
+}
+
+.period-change {
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.summary-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-label {
+    color: #495057;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.summary-value {
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 1rem;
+}
+
+.risk-item {
+    margin-bottom: 15px;
+}
+
+.risk-item:last-child {
+    margin-bottom: 0;
+}
+
+.realtime-update {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.quick-actions {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+
+.profit-change, .performance-badge {
+    font-size: 0.8rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .stat-number {
+        font-size: 1.5rem;
+    }
+
+    .period-value {
+        font-size: 1.1rem;
+    }
+
+    .calendar-day-mini {
+        width: 24px;
+        height: 24px;
+        font-size: 0.7rem;
+    }
+}
+</style>
+
+<script>
+// Initialize charts and real-time data
+let equityChart;
+
+function initCharts() {
+    // Equity Curve Chart
+    const equityCtx = document.getElementById('equityChart').getContext('2d');
+    equityChart = new Chart(equityCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Account Equity',
+                data: [],
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#3498db',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    titleFont: { size: 12 },
+                    bodyFont: { size: 11 },
+                    callbacks: {
+                        label: function(context) {
+                            return 'Equity: $' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        maxRotation: 0
+                    }
+                },
+                y: {
+                    beginAtZero: false,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+
+    // Load initial data
+    loadEquityData();
+    loadAllData();
+}
+
+function loadEquityData() {
+    fetch('/api/equity_curve')
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
+        .then(data => {
+            if (data.timestamps && data.equity) {
+                // Format dates for display
+                const formattedLabels = data.timestamps.map(date => {
+                    return new Date(date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                });
+
+                equityChart.data.labels = formattedLabels;
+                equityChart.data.datasets[0].data = data.equity;
+                equityChart.update('none');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading equity data:', error);
+            // Show sample data for demo
+            showSampleEquityData();
+        });
+}
+
+function showSampleEquityData() {
+    // Sample data for demonstration
+    const sampleLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const sampleData = [10000, 10500, 9800, 11200, 10800, 11500];
+
+    equityChart.data.labels = sampleLabels;
+    equityChart.data.datasets[0].data = sampleData;
+    equityChart.update();
+}
+
+function loadAllData() {
+    // Update sync time
+    document.getElementById('last-sync-time').textContent = new Date().toLocaleTimeString();
+
+    // Load account data
+    fetch('/api/stats/all')
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
+        .then(data => {
+            updateDashboardStats(data);
+        })
+        .catch(error => {
+            console.error('Error loading stats:', error);
+            showNotification('Failed to load statistics data', 'error');
+        });
+}
+
+function updateDashboardStats(data) {
+    // Update all dashboard statistics
+    const elements = {
+        'net-profit': data.net_profit ? '$' + data.net_profit.toFixed(2) : '$0.00',
+        'win-rate': data.win_rate ? data.win_rate.toFixed(1) + '%' : '0%',
+        'profit-factor': data.profit_factor ? data.profit_factor.toFixed(2) : '0.00',
+        'avg-trade': data.avg_trade ? '$' + data.avg_trade.toFixed(2) : '$0.00',
+        'sharpe-ratio': data.sharpe_ratio ? data.sharpe_ratio.toFixed(2) : '0.00',
+        'recovery-factor': data.recovery_factor ? data.recovery_factor.toFixed(2) : '0.00',
+        'expectancy': data.expectancy ? '$' + data.expectancy.toFixed(2) : '$0.00',
+        'max-drawdown': data.max_drawdown ? data.max_drawdown.toFixed(1) + '%' : '0.0%'
+    };
+
+    Object.keys(elements).forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = elements[id];
+    });
+
+    // Update profit change indicator
+    const profitChange = document.getElementById('profit-change');
+    if (profitChange && data.net_profit) {
+        const changePercent = ((data.net_profit / (data.starting_balance || 1)) * 100).toFixed(1);
+        profitChange.innerHTML = data.net_profit > 0 ?
+            `<i class="fas fa-arrow-up text-success"></i><span class="small text-success">+${changePercent}%</span>` :
+            `<i class="fas fa-arrow-down text-danger"></i><span class="small text-danger">${changePercent}%</span>`;
+    }
+}
+
+function forceSync() {
+    const syncBtn = event.target.closest('button');
+    const originalText = syncBtn.innerHTML;
+
+    // Show loading state
+    syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Syncing...';
+    syncBtn.disabled = true;
+
+    fetch('/api/sync_now')
+        .then(response => {
+            if (!response.ok) throw new Error('Sync request failed');
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showNotification('Sync completed successfully!', 'success');
+                loadAllData();
+                loadEquityData();
+            } else {
+                showNotification('Sync failed: ' + (data.message || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Sync error:', error);
+            showNotification('Sync error: ' + error.message, 'error');
+        })
+        .finally(() => {
+            // Restore button state after delay
+            setTimeout(() => {
+                syncBtn.innerHTML = originalText;
+                syncBtn.disabled = false;
+            }, 2000);
+        });
+}
+
+function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    document.querySelectorAll('.alert-notification').forEach(alert => alert.remove());
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-notification alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+            <div>${message}</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// SocketIO real-time updates
+if (typeof socket !== 'undefined') {
+    socket.on('data_update', function(data) {
+        console.log('📊 Dashboard update received:', data);
+
+        // Update last sync time
+        document.getElementById('last-sync-time').textContent = new Date().toLocaleTimeString();
+
+        // Update account data if available
+        if (data.account_data) {
+            document.getElementById('account-balance').textContent = '$' + (data.account_data.balance || 0).toFixed(2);
+            document.getElementById('account-equity').textContent = '$' + (data.account_data.equity || 0).toFixed(2);
+            document.getElementById('free-margin').textContent = '$' + (data.account_data.free_margin || 0).toFixed(2);
+            document.getElementById('margin-used').textContent = '$' + (data.account_data.margin || 0).toFixed(2);
+        }
+
+        // Update open positions count
+        if (data.open_positions_count !== undefined) {
+            document.getElementById('open-positions').textContent = data.open_positions_count;
+        }
+
+        // Show update notification
+        showNotification('Dashboard data updated', 'info');
+    });
+
+    socket.on('sync_complete', function(data) {
+        if (data.success) {
+            showNotification('Data synchronization completed!', 'success');
+            loadAllData();
+            loadEquityData();
+        }
+    });
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initCharts();
+
+    // Set up sync button
+    const syncBtn = document.getElementById('syncNowBtn');
+    if (syncBtn) {
+        syncBtn.addEventListener('click', function() {
+            syncNow();
+        });
+    }
+
+    // Load initial sync status
+    updateSyncStatus();
+
+    // Set up period buttons
+    document.querySelectorAll('[data-period]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Remove active class from all buttons
+            document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
+            // Load data for the selected period
+            const period = this.getAttribute('data-period');
+            loadPeriodData(period);
+        });
+    });
+
+    // Auto-refresh every 5 minutes
+    setInterval(loadAllData, 300000);
+    // Auto-refresh sync status every 30 seconds
+    setInterval(updateSyncStatus, 30000);
+});
+
+function syncNow() {
+    const syncBtn = document.getElementById('syncNowBtn');
+    const syncStatus = document.getElementById('syncStatus');
+
+    const originalText = syncBtn.innerHTML;
+    syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+    syncBtn.disabled = true;
+    syncStatus.textContent = 'Syncing...';
+    syncStatus.className = 'h5 mb-0 text-warning';
+
+    fetch('/api/sync_now')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                syncStatus.textContent = 'Success';
+                syncStatus.className = 'h5 mb-0 text-success';
+                showNotification('✅ ' + data.message, 'success');
+
+                // Update trade counts
+                if (data.trades_count !== undefined) {
+                    document.getElementById('totalTrades').textContent = data.trades_count;
+                }
+
+                // Update last sync time
+                document.getElementById('lastSyncText').textContent =
+                    'Last sync: ' + new Date().toLocaleTimeString();
+
+                // Refresh page after 2 seconds to show new data
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+
+            } else {
+                syncStatus.textContent = 'Failed';
+                syncStatus.className = 'h5 mb-0 text-danger';
+                showNotification('❌ ' + data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            syncStatus.textContent = 'Error';
+            syncStatus.className = 'h5 mb-0 text-danger';
+            showNotification('❌ Sync failed: ' + error, 'danger');
+        })
+        .finally(() => {
+            syncBtn.innerHTML = originalText;
+            syncBtn.disabled = false;
+        });
+}
+
+function updateSyncStatus() {
+    fetch('/api/sync_status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Sync status error:', data.error);
+                return;
+            }
+
+            // Update trade counts
+            if (data.trades_total !== undefined) {
+                document.getElementById('totalTrades').textContent = data.trades_total;
+            }
+            if (data.open_positions !== undefined) {
+                document.getElementById('openTrades').textContent = data.open_positions;
+            }
+
+            // Update last sync time
+            if (data.last_sync) {
+                const lastSync = new Date(data.last_sync);
+                document.getElementById('lastSyncText').textContent =
+                    'Last sync: ' + lastSync.toLocaleTimeString();
+            }
+
+            // Update sync status
+            const syncStatus = document.getElementById('syncStatus');
+            syncStatus.textContent = data.last_sync ? 'Synced' : 'Never';
+            syncStatus.className = data.last_sync ?
+                'h5 mb-0 text-success' : 'h5 mb-0 text-warning';
+        })
+        .catch(error => {
+            console.error('Failed to get sync status:', error);
+        });
+}
+
+function loadPeriodData(period) {
+    // This would load data for the selected time period
+    console.log('Loading data for period:', period);
+    showNotification(`Loading ${period} data...`, 'info');
+
+    // Implementation would depend on your API structure
+    // fetch(`/api/period_data?period=${period}`)
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         // Update charts and metrics for the period
+    //         updatePeriodMetrics(data);
+    //     });
+}
+
+function closePosition(ticketId) {
+    if (confirm('Are you sure you want to close this position?')) {
+        showNotification('Closing position...', 'info');
+
+        // Implementation for closing position
+        fetch(`/api/close_position/${ticketId}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Position closed successfully', 'success');
+                    // Reload open positions
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showNotification('Failed to close position: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Close position error:', error);
+                showNotification('Error closing position', 'error');
+            });
+    }
+}
+
+// Export functions for global access
+window.forceSync = forceSync;
+window.loadAllData = loadAllData;
+window.closePosition = closePosition;
+window.syncNow = syncNow;
+window.updateSyncStatus = updateSyncStatus;
+</script>
+{% endblock %}

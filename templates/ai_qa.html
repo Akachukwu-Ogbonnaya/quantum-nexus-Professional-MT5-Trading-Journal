@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Professional Journal AI Q&A - MT5 Journal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-gradient-to-r from-purple-700 to-indigo-800 text-white shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-brain text-2xl"></i>
+                    <h1 class="text-2xl font-bold">Quantum Professional Journal AI Q&A</h1>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="/dashboard" class="hover:text-purple-200 transition duration-300">
+                        <i class="fas fa-chart-line mr-2"></i>Dashboard
+                    </a>
+                    <a href="/journal" class="hover:text-purple-200 transition duration-300">
+                        <i class="fas fa-book-open mr-2"></i>Journal
+                    </a>
+                    <a href="/notes" class="hover:text-purple-200 transition duration-300">
+                        <i class="fas fa-sticky-note mr-2"></i>Notes
+                    </a>
+                    <a href="/ai_qa" class="bg-white text-purple-700 px-3 py-1 rounded-md font-semibold">
+                        <i class="fas fa-robot mr-2"></i>AI Q&A
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8 text-center">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Quantum Professional Journal AI Q&A</h2>
+            <p class="text-gray-600">Advanced AI-powered trading insights based on your actual performance data</p>
+        </div>
+
+        <!-- Performance Overview Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm text-gray-600">Win Rate</p>
+                        <h3 class="text-2xl font-bold text-gray-800" id="winRate">--%</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-trophy text-blue-500"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm text-gray-600">Avg R:R</p>
+                        <h3 class="text-2xl font-bold text-gray-800" id="avgRR">--</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-balance-scale text-green-500"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-purple-500">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm text-gray-600">Profit Factor</p>
+                        <h3 class="text-2xl font-bold text-gray-800" id="profitFactor">--</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-chart-line text-purple-500"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-red-500">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm text-gray-600">Drawdown</p>
+                        <h3 class="text-2xl font-bold text-gray-800" id="drawdown">--%</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-exclamation-triangle text-red-500"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced AI Interactive Sections -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- AI Trade Coach -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fas fa-user-graduate mr-2 text-indigo-500"></i>AI Trade Coach
+                </h3>
+                <p class="text-gray-600 mb-4">Your AI mentor provides insights based on your trading journal data.</p>
+                <div class="flex space-x-3 mb-4">
+                    <button onclick="getAICoachAdvice('daily')" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md transition text-sm">
+                        Daily Advice
+                    </button>
+                    <button onclick="getAICoachAdvice('weekly')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md transition text-sm">
+                        Weekly Review
+                    </button>
+                    <button onclick="getAICoachAdvice('monthly')" class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2 rounded-md transition text-sm">
+                        Monthly Analysis
+                    </button>
+                </div>
+                <div id="aiCoachResponse" class="mt-4 text-gray-800 bg-indigo-50 p-4 rounded-md"></div>
+            </div>
+
+            <!-- AI Risk Thermometer -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fas fa-thermometer-half mr-2 text-red-500"></i>AI Risk Thermometer
+                </h3>
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>Low Risk</span>
+                        <span>Medium Risk</span>
+                        <span>High Risk</span>
+                    </div>
+                    <div id="riskMeter" class="h-4 bg-gradient-to-r from-green-400 via-yellow-400 to-red-500 rounded-full overflow-hidden mb-2">
+                        <div id="riskLevel" class="h-4 bg-white rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+                <p id="riskAdvice" class="text-gray-700">Analyzing your risk exposure...</p>
+                <div class="mt-4">
+                    <button onclick="updateRiskAssessment()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition text-sm">
+                        Update Risk Assessment
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Trade Replay Analyzer -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                <i class="fas fa-history mr-2 text-teal-500"></i>AI Trade Replay Analyzer
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Select Trade</label>
+                    <select id="tradeSelect" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        <option value="">Loading trades...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Analysis Type</label>
+                    <select id="analysisType" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        <option value="technical">Technical Analysis</option>
+                        <option value="psychological">Psychological Analysis</option>
+                        <option value="risk">Risk Management</option>
+                        <option value="comprehensive">Comprehensive Review</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="analyzeSelectedTrade()" class="w-full bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-md transition">
+                        <i class="fas fa-play-circle mr-2"></i>Replay This Trade
+                    </button>
+                </div>
+            </div>
+            <div id="tradeReplayResult" class="mt-4 text-gray-800 bg-teal-50 p-4 rounded-md"></div>
+        </div>
+
+        <!-- AI Trading Psychology Journal -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                <i class="fas fa-heartbeat mr-2 text-pink-500"></i>Trading Psychology Check-in
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Current Emotional State</label>
+                    <div class="grid grid-cols-3 gap-2 mb-4">
+                        <button class="emotion-btn bg-green-100 text-green-800 py-2 rounded-md" data-emotion="confident">Confident</button>
+                        <button class="emotion-btn bg-blue-100 text-blue-800 py-2 rounded-md" data-emotion="calm">Calm</button>
+                        <button class="emotion-btn bg-yellow-100 text-yellow-800 py-2 rounded-md" data-emotion="anxious">Anxious</button>
+                        <button class="emotion-btn bg-red-100 text-red-800 py-2 rounded-md" data-emotion="frustrated">Frustrated</button>
+                        <button class="emotion-btn bg-purple-100 text-purple-800 py-2 rounded-md" data-emotion="optimistic">Optimistic</button>
+                        <button class="emotion-btn bg-gray-100 text-gray-800 py-2 rounded-md" data-emotion="neutral">Neutral</button>
+                    </div>
+                    <textarea id="moodNotes" rows="4" placeholder="Describe how you felt during your recent trades, any emotional triggers, or psychological patterns you noticed..."
+                            class="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-pink-500"></textarea>
+                </div>
+                <div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Recent Trading Performance Impact</label>
+                        <select id="performanceImpact" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500">
+                            <option value="positive">Positive Impact</option>
+                            <option value="neutral">Neutral Impact</option>
+                            <option value="negative">Negative Impact</option>
+                        </select>
+                    </div>
+                    <button onclick="analyzeMood()" class="w-full bg-pink-500 hover:bg-pink-600 text-white px-4 py-3 rounded-md transition font-medium">
+                        <i class="fas fa-brain mr-2"></i>Analyze My Mindset
+                    </button>
+                    <div id="moodFeedback" class="mt-4 text-gray-700 bg-pink-50 p-4 rounded-md"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Goal Tracker -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                <i class="fas fa-bullseye mr-2 text-orange-500"></i>AI Goal Tracker
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-medium text-gray-700 mb-3">Set New Goal</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Goal Type</label>
+                            <select id="goalType" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                <option value="roi">Monthly ROI</option>
+                                <option value="winrate">Win Rate</option>
+                                <option value="consistency">Consistency Score</option>
+                                <option value="risk">Risk Management</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Target Value</label>
+                            <input type="text" id="goalTarget" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="e.g., 5% for ROI">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Timeframe</label>
+                            <select id="goalTimeframe" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                <option value="weekly">1 Week</option>
+                                <option value="monthly">1 Month</option>
+                                <option value="quarterly">3 Months</option>
+                            </select>
+                        </div>
+                        <button onclick="setNewGoal()" class="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md transition">
+                            Set Goal
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-medium text-gray-700 mb-3">Goal Progress</h4>
+                    <div id="goalProgress" class="space-y-4">
+                        <!-- Goal progress will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Market Sentiment Briefing -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                <i class="fas fa-chart-bar mr-2 text-cyan-500"></i>AI Market Sentiment Briefing
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div class="text-center p-4 bg-cyan-50 rounded-lg">
+                    <div class="text-2xl font-bold text-cyan-700 mb-1" id="marketSentiment">--</div>
+                    <div class="text-sm text-cyan-600">Market Sentiment</div>
+                </div>
+                <div class="text-center p-4 bg-blue-50 rounded-lg">
+                    <div class="text-2xl font-bold text-blue-700 mb-1" id="volatilityIndex">--</div>
+                    <div class="text-sm text-blue-600">Volatility Index</div>
+                </div>
+                <div class="text-center p-4 bg-purple-50 rounded-lg">
+                    <div class="text-2xl font-bold text-purple-700 mb-1" id="tradeRecommendation">--</div>
+                    <div class="text-sm text-purple-600">Trade Recommendation</div>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="getMarketBriefing('intraday')" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-md transition text-sm">
+                    Intraday Briefing
+                </button>
+                <button onclick="getMarketBriefing('swing')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-md transition text-sm">
+                    Swing Trading
+                </button>
+                <button onclick="getMarketBriefing('position')" class="bg-cyan-700 hover:bg-cyan-800 text-white px-4 py-2 rounded-md transition text-sm">
+                    Position Trading
+                </button>
+            </div>
+            <div id="marketBriefing" class="mt-4 text-gray-800 bg-cyan-50 p-4 rounded-md"></div>
+        </div>
+
+        <!-- Custom Question Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                <i class="fas fa-comment-dots mr-2 text-purple-500"></i>Quantum AI Q&A
+            </h3>
+            <div class="space-y-4">
+                <textarea id="customQuestion" rows="3" placeholder="Ask anything about your trading performance, strategies, market analysis, or psychology..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                <div class="flex justify-between">
+                    <select id="questionCategory" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="performance">Performance Analysis</option>
+                        <option value="strategy">Trading Strategy</option>
+                        <option value="risk">Risk Management</option>
+                        <option value="psychology">Trading Psychology</option>
+                        <option value="market">Market Analysis</option>
+                        <option value="goals">Goal Tracking</option>
+                        <option value="general">General Trading</option>
+                    </select>
+                    <button onclick="askCustomQuestion()" class="px-6 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition duration-300">
+                        <i class="fas fa-paper-plane mr-2"></i>Ask Quantum AI
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Responses Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                <i class="fas fa-brain mr-2 text-purple-500"></i>Quantum AI Responses
+            </h3>
+
+            <div id="aiResponses" class="space-y-4">
+                <!-- AI responses will be loaded here -->
+            </div>
+
+            <div id="emptyResponses" class="text-center py-8">
+                <i class="fas fa-robot text-4xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500 text-lg">No AI responses yet. Ask a question above to get started!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+            <span class="text-gray-700">Quantum AI is analyzing...</span>
+        </div>
+    </div>
+
+    <script>
+        // Global variables to store user data
+        let userStats = {};
+        let userTrades = [];
+        let userGoals = [];
+
+        // Load user data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserData();
+            loadAIResponses();
+            setupEmotionButtons();
+        });
+
+        // Fetch user data from Flask backend
+        async function loadUserData() {
+            showLoading();
+
+            try {
+                // This would be actual API calls to your Flask backend
+                // For demonstration, we'll use mock data
+
+                // Mock user stats
+                userStats = {
+                    win_rate: 62.5,
+                    avg_rr: 1.8,
+                    profit_factor: 2.1,
+                    drawdown: 4.2,
+                    total_trades: 48,
+                    profitable_trades: 30,
+                    total_pnl: 2450,
+                    best_trade: 320,
+                    worst_trade: -150,
+                    avg_trade: 51,
+                    consistency_score: 78
+                };
+
+                // Mock trades data
+                userTrades = [
+                    { id: 1, symbol: "EUR/USD", type: "BUY", entry: 1.0850, exit: 1.0920, pnl: 70, date: "2023-10-15", strategy: "Breakout" },
+                    { id: 2, symbol: "GBP/USD", type: "SELL", entry: 1.2450, exit: 1.2380, pnl: 70, date: "2023-10-16", strategy: "Trend Following" },
+                    { id: 3, symbol: "USD/JPY", type: "BUY", entry: 149.20, exit: 148.80, pnl: -40, date: "2023-10-17", strategy: "Counter-trend" },
+                    { id: 4, symbol: "AUD/USD", type: "BUY", entry: 0.6350, exit: 0.6420, pnl: 70, date: "2023-10-18", strategy: "Breakout" },
+                    { id: 5, symbol: "USD/CAD", type: "SELL", entry: 1.3650, exit: 1.3580, pnl: 70, date: "2023-10-19", strategy: "Trend Following" }
+                ];
+
+                // Mock goals
+                userGoals = [
+                    { id: 1, type: "roi", target: 5, current: 3.2, timeframe: "monthly", progress: 64 },
+                    { id: 2, type: "winrate", target: 65, current: 62.5, timeframe: "monthly", progress: 96 },
+                    { id: 3, type: "consistency", target: 80, current: 78, timeframe: "monthly", progress: 97.5 }
+                ];
+
+                // Update UI with user stats
+                updateStatsUI();
+
+                // Load trades into dropdown
+                loadTradesDropdown();
+
+                // Load goals progress
+                loadGoalsProgress();
+
+                // Initialize risk assessment
+                updateRiskAssessment();
+
+                // Get initial market briefing
+                getMarketBriefing('intraday');
+
+            } catch (error) {
+                console.error("Error loading user data:", error);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function updateStatsUI() {
+            document.getElementById('winRate').textContent = userStats.win_rate + '%';
+            document.getElementById('avgRR').textContent = userStats.avg_rr.toFixed(2);
+            document.getElementById('profitFactor').textContent = userStats.profit_factor.toFixed(2);
+            document.getElementById('drawdown').textContent = userStats.drawdown + '%';
+        }
+
+        function loadTradesDropdown() {
+            const tradeSelect = document.getElementById('tradeSelect');
+            tradeSelect.innerHTML = '<option value="">Select a trade to analyze</option>';
+
+            userTrades.forEach(trade => {
+                const option = document.createElement('option');
+                option.value = trade.id;
+                option.textContent = `${trade.symbol} - ${trade.type} - ${trade.pnl > 0 ? '+' : ''}${trade.pnl} pips - ${trade.date}`;
+                tradeSelect.appendChild(option);
+            });
+        }
+
+        function loadGoalsProgress() {
+            const goalProgress = document.getElementById('goalProgress');
+
+            if (userGoals.length === 0) {
+                goalProgress.innerHTML = '<p class="text-gray-500 text-center py-4">No goals set yet. Set your first goal above!</p>';
+                return;
+            }
+
+            goalProgress.innerHTML = userGoals.map(goal => `
+                <div class="border border-gray-200 rounded-lg p-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-medium text-gray-700 capitalize">${goal.type} Goal</span>
+                        <span class="text-sm font-semibold ${goal.progress >= 80 ? 'text-green-600' : goal.progress >= 50 ? 'text-yellow-600' : 'text-red-600'}">
+                            ${goal.progress}%
+                        </span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                        <div class="h-2 rounded-full ${goal.progress >= 80 ? 'bg-green-500' : goal.progress >= 50 ? 'bg-yellow-500' : 'bg-red-500'}"
+                             style="width: ${goal.progress}%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>Current: ${goal.current}${goal.type === 'roi' ? '%' : goal.type === 'winrate' ? '%' : ''}</span>
+                        <span>Target: ${goal.target}${goal.type === 'roi' ? '%' : goal.type === 'winrate' ? '%' : ''}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function setupEmotionButtons() {
+            const emotionButtons = document.querySelectorAll('.emotion-btn');
+            emotionButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove active class from all buttons
+                    emotionButtons.forEach(btn => btn.classList.remove('ring-2', 'ring-offset-1'));
+
+                    // Add active class to clicked button
+                    this.classList.add('ring-2', 'ring-offset-1', 'ring-pink-500');
+
+                    // Update mood notes placeholder with selected emotion
+                    const emotion = this.getAttribute('data-emotion');
+                    document.getElementById('moodNotes').placeholder = `Describe how you felt when ${emotion} during your trades...`;
+                });
+            });
+        }
+
+        // AI Trade Coach
+        async function getAICoachAdvice(timeframe) {
+            showLoading();
+
+            try {
+                // In a real implementation, this would call your Flask backend
+                // which would then call the AI service with the user's data
+
+                const prompt = `As a professional trading coach, analyze this trader's performance and provide ${timeframe} advice:
+
+                Trader Performance Summary:
+                - Win Rate: ${userStats.win_rate}%
+                - Average Risk-Reward: ${userStats.avg_rr}
+                - Profit Factor: ${userStats.profit_factor}
+                - Current Drawdown: ${userStats.drawdown}%
+                - Total Trades: ${userStats.total_trades}
+                - Consistency Score: ${userStats.consistency_score}/100
+
+                Provide actionable advice in 2-3 paragraphs focusing on ${timeframe === 'daily' ? 'today\'s trading opportunities' : timeframe === 'weekly' ? 'this week\'s performance review' : 'this month\'s strategic adjustments'}.`;
+
+                // Mock AI response
+                setTimeout(() => {
+                    let advice = "";
+
+                    if (timeframe === 'daily') {
+                        advice = `Based on your strong win rate of ${userStats.win_rate}% and solid risk-reward ratio of ${userStats.avg_rr}, you're positioned well for today's trading. Given your consistency score of ${userStats.consistency_score}/100, I recommend focusing on your highest-probability setups during the London-New York overlap session where your breakout strategies have historically performed best.
+
+Consider reducing position size by 15% during the Asian session today as volatility is expected to be lower, which doesn't align with your trading strengths. Your profit factor of ${userStats.profit_factor} indicates excellent trade management - continue applying the same discipline to today's trades.
+
+Watch for potential EUR/USD breakout opportunities around the 1.0850 level, which has been a key area in your successful trades. Avoid the temptation to trade GBP pairs during early US session as your data shows lower performance during that timeframe.`;
+                    } else if (timeframe === 'weekly') {
+                        advice = `This week's performance analysis reveals your consistency is strong at ${userStats.consistency_score}/100, but there's room to improve your risk-adjusted returns. Your win rate of ${userStats.win_rate}% is excellent, but consider whether you're taking profits too early given your ${userStats.avg_rr} risk-reward ratio.
+
+I notice your most profitable trades come from breakout strategies during high-volatility periods. This week, focus on identifying 2-3 high-quality setups per day rather than increasing trade frequency. Your data shows diminishing returns beyond 4 daily trades.
+
+The ${userStats.drawdown}% drawdown is manageable, but implement a hard stop-loss rule this week: if you hit 3% drawdown from weekly starting equity, reduce position sizes by 50% until you recover. This will protect your capital during potential volatility spikes expected mid-week.`;
+                    } else {
+                        advice = `Monthly performance review indicates solid fundamentals with a ${userStats.win_rate}% win rate and ${userStats.profit_factor} profit factor. However, your risk-reward ratio of ${userStats.avg_rr} suggests potential to capture larger moves.
+
+This month, experiment with trailing stop-losses on 30% of your positions once they reach 1R profit. Your data shows you often exit winners too early, leaving potential profit on the table. The consistency score of ${userStats.consistency_score}/100 is commendable - maintain this discipline.
+
+Given your current drawdown of ${userStats.drawdown}%, consider allocating 5% of capital to longer-term swing trades that align with your breakout strategy but with wider stops. This diversification could smooth equity curves. Also, review your 3 losing trades from last month - all occurred during low-volume periods where your edge is weakest.`;
+                    }
+
+                    document.getElementById('aiCoachResponse').innerHTML = `
+                        <div class="flex items-start mb-2">
+                            <i class="fas fa-user-graduate text-indigo-500 mt-1 mr-2"></i>
+                            <strong class="text-indigo-700">AI Coach ${timeframe.charAt(0).toUpperCase() + timeframe.slice(1)} Advice:</strong>
+                        </div>
+                        <div class="text-gray-700 whitespace-pre-line">${advice}</div>
+                    `;
+                    hideLoading();
+                }, 2000);
+
+            } catch (error) {
+                console.error("Error getting AI coach advice:", error);
+                hideLoading();
+            }
+        }
+
+        // AI Risk Thermometer
+        function updateRiskAssessment() {
+            // Calculate risk level based on user stats
+            let riskLevel = 0;
+            let riskAdvice = "";
+
+            if (userStats.drawdown <= 3) {
+                riskLevel = 25;
+                riskAdvice = "Low risk exposure. Your drawdown is well-controlled. Consider gradually increasing position sizes if opportunities align with your strategy.";
+            } else if (userStats.drawdown <= 6) {
+                riskLevel = 50;
+                riskAdvice = "Moderate risk exposure. Maintain current position sizes. Monitor for any correlation in losing trades that might indicate a strategy flaw.";
+            } else if (userStats.drawdown <= 10) {
+                riskLevel = 75;
+                riskAdvice = "Elevated risk exposure. Consider reducing position sizes by 20-30% until drawdown recovers below 5%. Review recent losing trades for patterns.";
+            } else {
+                riskLevel = 95;
+                riskAdvice = "High risk exposure. Immediate action needed: Reduce position sizes by 50% and only trade your highest-probability setups until drawdown recovers.";
+            }
+
+            // Adjust based on win rate consistency
+            if (userStats.win_rate < 50) {
+                riskLevel = Math.min(100, riskLevel + 15);
+                riskAdvice += " Your win rate below 50% suggests potential issues with entry timing or strategy execution.";
+            }
+
+            // Update UI
+            document.getElementById('riskLevel').style.width = riskLevel + '%';
+            document.getElementById('riskAdvice').textContent = riskAdvice;
+        }
+
+        // AI Trade Replay Analyzer
+        function analyzeSelectedTrade() {
+            const tradeId = document.getElementById('tradeSelect').value;
+            const analysisType = document.getElementById('analysisType').value;
+
+            if (!tradeId) {
+                alert('Please select a trade to analyze');
+                return;
+            }
+
+            showLoading();
+
+            // Find the selected trade
+            const trade = userTrades.find(t => t.id == tradeId);
+
+            // Mock AI analysis based on trade data and analysis type
+            setTimeout(() => {
+                let analysis = "";
+
+                if (analysisType === 'technical') {
+                    analysis = `Technical Analysis of ${trade.symbol} ${trade.type} Trade:
+
+Entry at ${trade.entry} was ${trade.pnl > 0 ? 'well-timed' : 'premature'} based on the prevailing market structure.
+The ${trade.strategy} strategy ${trade.pnl > 0 ? 'executed effectively' : 'faced challenges'} given the market conditions.
+
+Key observations:
+- Price action following entry showed ${trade.pnl > 0 ? 'strong continuation' : 'significant retracement'}
+- Volatility was ${Math.random() > 0.5 ? 'above average' : 'below average'} during this trade
+- The exit at ${trade.exit} captured ${trade.pnl > 0 ? 'a reasonable portion of the move' : 'less than optimal profits'}
+
+Recommendation: ${trade.pnl > 0 ? 'Continue applying this strategy in similar conditions' : 'Adjust entry criteria or add confirmation signals'}`;
+                } else if (analysisType === 'psychological') {
+                    analysis = `Psychological Analysis of ${trade.symbol} Trade:
+
+This ${trade.pnl > 0 ? 'winning' : 'losing'} trade likely triggered ${trade.pnl > 0 ? 'confidence and satisfaction' : 'frustration or doubt'} emotions.
+
+Pattern analysis:
+- ${trade.type} trades during this session typically show ${Math.random() > 0.5 ? 'strong performance' : 'mixed results'}
+- Your emotional response to ${trade.pnl > 0 ? 'winners' : 'losers'} appears ${Math.random() > 0.5 ? 'well-balanced' : 'needs attention'}
+- The trade duration suggests ${Math.random() > 0.5 ? 'patience' : 'impulsivity'} in management
+
+Mindset recommendation: ${trade.pnl > 0 ? 'Reinforce the disciplined process that led to this success' : 'Review the trade objectively without emotional attachment to improve future decisions'}`;
+                } else if (analysisType === 'risk') {
+                    analysis = `Risk Management Analysis of ${trade.symbol} Trade:
+
+Position sizing appeared ${Math.random() > 0.5 ? 'appropriate' : 'potentially excessive'} for account size.
+The ${trade.pnl > 0 ? 'favorable' : 'unfavorable'} outcome resulted from ${Math.random() > 0.5 ? 'effective' : 'ineffective'} risk control.
+
+Risk assessment:
+- Stop-loss placement was ${Math.random() > 0.5 ? 'technically sound' : 'questionable'}
+- Profit target rationale was ${Math.random() > 0.5 ? 'clear and logical' : 'arbitrary or emotional'}
+- Overall risk-reward for this setup was ${Math.random() > 0.5 ? 'favorable' : 'unfavorable'}
+
+Risk recommendation: ${trade.pnl > 0 ? 'Maintain similar risk parameters for comparable setups' : 'Adjust position sizing or stop-loss placement to improve risk-reward ratio'}`;
+                } else {
+                    analysis = `Comprehensive Analysis of ${trade.symbol} ${trade.type} Trade:
+
+STRATEGY EXECUTION: ${trade.strategy} was ${trade.pnl > 0 ? 'effectively implemented' : 'poorly timed'}.
+The market context ${trade.pnl > 0 ? 'aligned well with' : 'contradicted'} your approach.
+
+TECHNICAL ALIGNMENT: Entry timing was ${Math.random() > 0.5 ? 'technically sound' : 'technically weak'} based on:
+- Support/resistance levels
+- Momentum indicators
+- Volume profile
+
+PSYCHOLOGICAL FACTORS: Trade management showed signs of ${Math.random() > 0.5 ? 'discipline and patience' : 'emotion-driven decisions'}.
+
+RISK ASSESSMENT: Position size relative to account was ${Math.random() > 0.5 ? 'appropriate' : 'concerning'}.
+
+KEY TAKEAWAY: ${trade.pnl > 0 ? 'Replicate this successful process' : 'Identify the specific flaw and create an improvement plan'}.`;
+                }
+
+                document.getElementById('tradeReplayResult').innerHTML = `
+                    <div class="flex items-start mb-2">
+                        <i class="fas fa-history text-teal-500 mt-1 mr-2"></i>
+                        <strong class="text-teal-700">Trade Replay Analysis (${analysisType}):</strong>
+                    </div>
+                    <div class="text-gray-700 whitespace-pre-line">${analysis}</div>
+                `;
+                hideLoading();
+            }, 2500);
+        }
+
+        // AI Trading Psychology Journal
+        function analyzeMood() {
+            const moodNotes = document.getElementById('moodNotes').value;
+            const performanceImpact = document.getElementById('performanceImpact').value;
+
+            if (!moodNotes) {
+                alert('Please describe your emotional state and trading experience');
+                return;
+            }
+
+            showLoading();
+
+            // Mock AI analysis of trading psychology
+            setTimeout(() => {
+                let analysis = "";
+
+                // Simple keyword analysis (in a real app, this would use NLP)
+                const anxietyWords = ['anxious', 'nervous', 'worried', 'stressed', 'fear', 'scared'];
+                const confidenceWords = ['confident', 'sure', 'certain', 'comfortable', 'calm'];
+                const frustrationWords = ['frustrated', 'angry', 'annoyed', 'disappointed', 'mad'];
+
+                let emotionProfile = "balanced";
+                let anxietyCount = 0;
+                let confidenceCount = 0;
+                let frustrationCount = 0;
+
+                anxietyWords.forEach(word => {
+                    if (moodNotes.toLowerCase().includes(word)) anxietyCount++;
+                });
+
+                confidenceWords.forEach(word => {
+                    if (moodNotes.toLowerCase().includes(word)) confidenceCount++;
+                });
+
+                frustrationWords.forEach(word => {
+                    if (moodNotes.toLowerCase().includes(word)) frustrationCount++;
+                });
+
+                if (anxietyCount > confidenceCount && anxietyCount > frustrationCount) {
+                    emotionProfile = "anxious";
+                } else if (confidenceCount > anxietyCount && confidenceCount > frustrationCount) {
+                    emotionProfile = "confident";
+                } else if (frustrationCount > anxietyCount && frustrationCount > confidenceCount) {
+                    emotionProfile = "frustrated";
+                }
+
+                if (emotionProfile === "anxious") {
+                    analysis = `Your emotional state shows signs of trading anxiety, which is common but can impact decision-making.
+
+Recommendations:
+1. Reduce position sizes temporarily until confidence returns
+2. Focus on your highest-probability setups only
+3. Practice deep breathing before entering trades
+4. Review your trading plan to reinforce your edge
+
+Remember that some anxiety is normal, but it shouldn't control your decisions. Your ${userStats.win_rate}% win rate suggests you have a valid edge - trust your process.`;
+                } else if (emotionProfile === "confident") {
+                    analysis = `You're displaying healthy confidence in your trading approach, which aligns with your solid performance metrics.
+
+Maintenance tips:
+1. Stay disciplined even during winning streaks
+2. Avoid increasing position sizes due to overconfidence
+3. Continue following your risk management rules
+4. Document what's working for future reference
+
+Your ${userStats.consistency_score}/100 consistency score indicates good discipline - maintain this mindset while staying adaptable to changing market conditions.`;
+                } else if (emotionProfile === "frustrated") {
+                    analysis = `Frustration is evident in your trading experience, often stemming from unmet expectations.
+
+Mindset reset strategies:
+1. Take a short break from trading (1-2 days)
+2. Review trades objectively, not emotionally
+3. Focus on process over outcomes
+4. Reconnect with your original trading goals
+
+Your ${userStats.profit_factor} profit factor shows you're generally profitable - this temporary frustration will pass if you stick to your proven methods.`;
+                } else {
+                    analysis = `You're maintaining a balanced emotional state, which is ideal for consistent trading performance.
+
+Continue with:
+1. Regular self-check-ins during trading sessions
+2. Maintaining your current risk management approach
+3. Balancing analysis with intuition
+4. Taking breaks to avoid mental fatigue
+
+Your emotional equilibrium combined with your ${userStats.avg_rr} risk-reward ratio creates a solid foundation for long-term success.`;
+                }
+
+                // Add performance impact context
+                if (performanceImpact === "positive") {
+                    analysis += "\n\nYour positive performance impact suggests your current mindset is working well - continue these emotional management practices.";
+                } else if (performanceImpact === "negative") {
+                    analysis += "\n\nThe negative performance impact indicates a need to address emotional triggers before they affect your trading results more significantly.";
+                }
+
+                document.getElementById('moodFeedback').innerHTML = `
+                    <div class="flex items-start mb-2">
+                        <i class="fas fa-heartbeat text-pink-500 mt-1 mr-2"></i>
+                        <strong class="text-pink-700">Mindset Analysis:</strong>
+                    </div>
+                    <div class="text-gray-700 whitespace-pre-line">${analysis}</div>
+                `;
+                hideLoading();
+            }, 2000);
+        }
+
+        // AI Goal Tracker
+        function setNewGoal() {
+            const goalType = document.getElementById('goalType').value;
+            const goalTarget = document.getElementById('goalTarget').value;
+            const goalTimeframe = document.getElementById('goalTimeframe').value;
+
+            if (!goalTarget) {
+                alert('Please enter a target value for your goal');
+                return;
+            }
+
+            // In a real implementation, this would save to your backend
+            const newGoal = {
+                id: userGoals.length + 1,
+                type: goalType,
+                target: parseFloat(goalTarget),
+                current: 0, // Would be calculated based on current performance
+                timeframe: goalTimeframe,
+                progress: 0
+            };
+
+            // Calculate current value and progress based on user stats
+            if (goalType === 'roi') {
+                newGoal.current = userStats.total_pnl / 1000; // Simplified calculation
+                newGoal.progress = Math.min(100, (newGoal.current / newGoal.target) * 100);
+            } else if (goalType === 'winrate') {
+                newGoal.current = userStats.win_rate;
+                newGoal.progress = Math.min(100, (newGoal.current / newGoal.target) * 100);
+            } else if (goalType === 'consistency') {
+                newGoal.current = userStats.consistency_score;
+                newGoal.progress = Math.min(100, (newGoal.current / newGoal.target) * 100);
+            } else {
+                newGoal.current = 70; // Default for risk management goal
+                newGoal.progress = 70;
+            }
+
+            userGoals.push(newGoal);
+            loadGoalsProgress();
+
+            // Reset form
+            document.getElementById('goalTarget').value = '';
+
+            // Show confirmation
+            alert(`New ${goalType} goal set: ${goalTarget}% within ${goalTimeframe}`);
+        }
+
+        // AI Market Sentiment Briefing
+        function getMarketBriefing(timeframe) {
+            showLoading();
+
+            // Mock market data
+            const sentimentValues = ['Bullish', 'Bearish', 'Neutral', 'Volatile'];
+            const volatilityValues = ['Low', 'Moderate', 'High', 'Extreme'];
+            const recommendationValues = ['Trade Aggressively', 'Trade Cautiously', 'Stand Aside', 'Focus on Quality Setups'];
+
+            const randomSentiment = sentimentValues[Math.floor(Math.random() * sentimentValues.length)];
+            const randomVolatility = volatilityValues[Math.floor(Math.random() * volatilityValues.length)];
+            const randomRecommendation = recommendationValues[Math.floor(Math.random() * recommendationValues.length)];
+
+            // Update market metrics
+            document.getElementById('marketSentiment').textContent = randomSentiment;
+            document.getElementById('volatilityIndex').textContent = randomVolatility;
+            document.getElementById('tradeRecommendation').textContent = randomRecommendation;
+
+            // Generate briefing based on timeframe and user stats
+            setTimeout(() => {
+                let briefing = "";
+
+                if (timeframe === 'intraday') {
+                    briefing = `INTRADAY MARKET BRIEFING (Generated for your trading style)
+
+Market Sentiment: ${randomSentiment}
+Volatility: ${randomVolatility}
+Recommendation: ${randomRecommendation}
+
+Key Levels to Watch:
+- EUR/USD: 1.0850 support, 1.0950 resistance
+- GBP/USD: 1.2400 support, 1.2550 resistance
+- Gold: $1970 support, $2015 resistance
+
+Trading Advice for Your Strategy:
+Given your ${userStats.win_rate}% win rate with ${userStats.avg_rr} risk-reward ratio, focus on ${randomVolatility === 'High' ? 'fewer but higher-quality setups' : 'your standard trading plan'}.
+
+Session Analysis:
+- Asian Session: ${Math.random() > 0.5 ? 'Quiet price action' : 'Potential breakout opportunities'}
+- London Session: ${Math.random() > 0.5 ? 'Strong momentum expected' : 'Ranging conditions likely'}
+- NY Session: ${Math.random() > 0.5 ? 'Volatility expansion probable' : 'Follow-through from London'}
+
+Risk Management Note: ${userStats.drawdown <= 5 ? 'Your current drawdown is manageable' : 'Consider reducing position sizes given your current drawdown'}.`;
+                } else if (timeframe === 'swing') {
+                    briefing = `SWING TRADING MARKET BRIEFING (Tailored to your performance)
+
+Market Sentiment: ${randomSentiment}
+Volatility: ${randomVolatility}
+Recommendation: ${randomRecommendation}
+
+Swing Trade Opportunities:
+1. EUR/USD: ${Math.random() > 0.5 ? 'Bullish bias above 1.0850' : 'Bearish bias below 1.0950'}
+2. USD/JPY: ${Math.random() > 0.5 ? 'Breakout potential at 150.00' : 'Range-bound between 148-150'}
+3. GBP/JPY: ${Math.random() > 0.5 ? 'Momentum building for continuation' : 'Approaching key resistance'}
+
+Position Sizing Advice:
+With your ${userStats.profit_factor} profit factor, ${randomRecommendation.toLowerCase()} with position sizes between ${userStats.drawdown <= 5 ? '1-2%' : '0.5-1%'} of account.
+
+Trade Management:
+Given your consistency score of ${userStats.consistency_score}/100, maintain your disciplined approach to stop-loss placement and profit-taking.
+
+Weekly Outlook:
+- Fundamental Drivers: ${Math.random() > 0.5 ? 'Central bank speeches' : 'Economic data releases'}
+- Technical Setup: ${Math.random() > 0.5 ? 'Trend continuation likely' : 'Potential reversal patterns forming'}`;
+                } else {
+                    briefing = `POSITION TRADING MARKET BRIEFING (Strategic overview)
+
+Market Sentiment: ${randomSentiment}
+Volatility: ${randomVolatility}
+Recommendation: ${randomRecommendation}
+
+Quarterly Themes:
+- USD Direction: ${Math.random() > 0.5 ? 'Bullish momentum intact' : 'Topping patterns emerging'}
+- Equity Correlation: ${Math.random() > 0.5 ? 'Positive correlation strengthening' : 'Decoupling from equities'}
+- Commodity Currencies: ${Math.random() > 0.5 ? 'Outperformance expected' : 'Underpressure continuing'}
+
+Portfolio Allocation:
+Considering your ${userStats.total_trades} trades with ${userStats.avg_rr} average risk-reward, allocate:
+- 60% to your highest-conviction setups
+- 25% to medium-probability opportunities
+- 15% to experimental strategies
+
+Risk-Adjusted Approach:
+Your ${userStats.win_rate}% win rate supports a position sizing model based on ${userStats.drawdown <= 5 ? 'aggressive' : 'conservative'} risk parameters.
+
+Fundamental Backdrop:
+- Central Bank Policy: ${Math.random() > 0.5 ? 'Remains accommodative' : 'Turning restrictive'}
+- Global Growth: ${Math.random() > 0.5 ? 'Moderate expansion' : 'Slowing momentum'}
+- Geopolitical Factors: ${Math.random() > 0.5 ? 'Stable conditions' : 'Elevated tensions'}`;
+                }
+
+                document.getElementById('marketBriefing').innerHTML = `
+                    <div class="flex items-start mb-2">
+                        <i class="fas fa-chart-bar text-cyan-500 mt-1 mr-2"></i>
+                        <strong class="text-cyan-700">${timeframe.charAt(0).toUpperCase() + timeframe.slice(1)} Market Briefing:</strong>
+                    </div>
+                    <div class="text-gray-700 whitespace-pre-line">${briefing}</div>
+                `;
+                hideLoading();
+            }, 2000);
+        }
+
+        // Custom Question Section (Enhanced)
+        function askCustomQuestion() {
+            const question = document.getElementById('customQuestion').value.trim();
+            const category = document.getElementById('questionCategory').value;
+
+            if (!question) {
+                alert('Please enter a question');
+                return;
+            }
+
+            showLoading();
+
+            // Create context from user stats for the AI
+            const context = `
+Trader Performance Context:
+- Win Rate: ${userStats.win_rate}%
+- Average Risk-Reward: ${userStats.avg_rr}
+- Profit Factor: ${userStats.profit_factor}
+- Drawdown: ${userStats.drawdown}%
+- Total Trades: ${userStats.total_trades}
+- Consistency Score: ${userStats.consistency_score}/100
+- Best Trade: +${userStats.best_trade}
+- Worst Trade: ${userStats.worst_trade}
+- Average Trade: ${userStats.avg_trade}
+
+Question: ${question}
+Category: ${category}
+`;
+
+            setTimeout(() => {
+                // Enhanced AI response based on category and user context
+                let answer = "";
+
+                if (category === 'performance') {
+                    answer = `Based on your performance data (${userStats.win_rate}% win rate, ${userStats.avg_rr} R:R), ${question.toLowerCase().includes('improve') ? 'here are specific improvements:' : 'here is my analysis:'}
+
+${userStats.win_rate < 60 ? 'Your win rate has room for improvement. Focus on:' : 'Your win rate is strong. Maintain by:'}
+1. ${userStats.avg_rr < 1.5 ? 'Increasing your risk-reward ratio by being more selective with entries' : 'Continuing your excellent risk-reward management'}
+2. ${userStats.consistency_score < 80 ? 'Working on trade execution consistency - review your journal for patterns' : 'Your consistency is excellent - document what\'s working'}
+3. ${userStats.drawdown > 5 ? 'Reducing drawdown through better risk management and position sizing' : 'Your drawdown control is good - maintain current practices'}
+
+Specific recommendation: ${userStats.profit_factor > 2 ? 'Your high profit factor suggests you should continue your current approach with minor refinements' : 'Focus on improving your profit factor through better trade management'}.`;
+                } else if (category === 'strategy') {
+                    answer = `Strategy analysis based on your ${userStats.total_trades} trades:
+
+Your current approach yields a ${userStats.win_rate}% win rate with ${userStats.avg_rr} average risk-reward.
+
+Strategic recommendations:
+1. ${userStats.win_rate > 55 && userStats.avg_rr > 1.5 ? 'Continue your current strategy but consider adding a complementary approach for different market conditions' : 'Experiment with adjusting your entry criteria to improve either win rate or risk-reward'}
+2. ${userStats.consistency_score > 75 ? 'Your high consistency suggests you have a well-defined process - document it thoroughly' : 'Work on standardizing your approach to improve consistency'}
+3. ${userStats.profit_factor > 1.5 ? 'Your profitable system should be scaled carefully while monitoring for capacity constraints' : 'Focus on validating your edge before increasing trade frequency'}
+
+Market condition alignment: Your strategy appears most effective during ${Math.random() > 0.5 ? 'trending markets' : 'volatile breakout sessions'}.`;
+                } else if (category === 'risk') {
+                    answer = `Risk assessment based on your ${userStats.drawdown}% drawdown and ${userStats.avg_rr} risk-reward:
+
+Your current risk profile is ${userStats.drawdown <= 5 ? 'conservative' : userStats.drawdown <= 10 ? 'moderate' : 'aggressive'}.
+
+Risk management recommendations:
+1. Position sizing: ${userStats.drawdown > 8 ? 'Reduce by 20-30% until drawdown recovers' : 'Current sizing appears appropriate'}
+2. Stop-loss strategy: ${userStats.win_rate < 50 ? 'Consider tightening stops to improve win rate' : 'Your stop placement seems effective'}
+3. Portfolio correlation: ${Math.random() > 0.5 ? 'Monitor for correlated losses across positions' : 'Your trades show good diversification'}
+4. Daily loss limits: ${userStats.drawdown > 5 ? 'Implement a hard daily loss limit of 2%' : 'Your current risk control is adequate'}
+
+Risk-adjusted return: Your ${userStats.profit_factor} profit factor indicates ${userStats.profit_factor > 2 ? 'excellent' : 'adequate'} risk efficiency.`;
+                } else if (category === 'psychology') {
+                    answer = `Psychological analysis based on your ${userStats.consistency_score}/100 consistency score:
+
+Your trading psychology appears ${userStats.consistency_score > 80 ? 'well-developed' : userStats.consistency_score > 60 ? 'developing positively' : 'needing attention'}.
+
+Mindset recommendations:
+1. ${userStats.win_rate > 60 ? 'Guard against overconfidence during winning streaks' : 'Build confidence through reviewing successful trades'}
+2. ${userStats.drawdown > 8 ? 'Implement stricter rules during drawdown periods to prevent emotional decisions' : 'Your drawdown management suggests good emotional control'}
+3. ${userStats.consistency_score < 70 ? 'Work on process-orientation rather than outcome focus' : 'Your consistency indicates strong discipline'}
+
+Performance-mindset connection: ${userStats.win_rate > 55 && userStats.consistency_score > 75 ? 'Your results suggest a healthy psychological approach to trading' : 'Consider whether emotional factors might be limiting your performance'}.`;
+                } else if (category === 'market') {
+                    answer = `Market analysis contextualized for your trading style:
+
+Given your ${userStats.win_rate}% win rate and ${userStats.avg_rr} risk-reward ratio, current market conditions appear ${Math.random() > 0.5 ? 'favorable' : 'challenging'} for your approach.
+
+Market-specific advice:
+1. Volatility regime: ${userStats.win_rate > 55 ? 'Your strategy performs well in current volatility - maintain approach' : 'Consider adapting to current volatility environment'}
+2. Session alignment: ${Math.random() > 0.5 ? 'Focus on London/NY overlap where your edge is strongest' : 'Experiment with Asian session for diversification'}
+3. Currency pairs: ${Math.random() > 0.5 ? 'Your results suggest sticking to major pairs' : 'Consider selective minor pair opportunities'}
+
+Fundamental-technical alignment: ${Math.random() > 0.5 ? 'Current fundamentals support your technical approach' : 'Be aware of fundamental divergences from technical setups'}.`;
+                } else if (category === 'goals') {
+                    answer = `Goal analysis based on your current performance:
+
+Your ${userStats.win_rate}% win rate against ${userStats.avg_rr} risk-reward creates a ${userStats.profit_factor} profit factor.
+
+Goal-setting recommendations:
+1. Short-term (1 month): ${userStats.win_rate < 55 ? 'Focus on achieving a 55% win rate' : 'Work on increasing risk-reward to 2.0'}
+2. Medium-term (3 months): ${userStats.profit_factor < 2 ? 'Aim for a 2.0 profit factor' : 'Target a 5% monthly ROI'}
+3. Long-term (6 months): 'Develop a secondary strategy for different market conditions'
+
+Progress tracking: ${userStats.consistency_score > 80 ? 'Your high consistency will support goal achievement' : 'Improving consistency should be a primary focus'}.`;
+                } else {
+                    answer = `Comprehensive analysis based on your trading data:
+
+Overall assessment: You have a ${userStats.win_rate}% win rate with ${userStats.avg_rr} risk-reward, producing a ${userStats.profit_factor} profit factor.
+
+Key observations:
+- Strength: ${userStats.consistency_score > 75 ? 'Excellent trade execution consistency' : userStats.win_rate > 60 ? 'Strong win rate performance' : userStats.avg_rr > 2 ? 'Outstanding risk-reward management' : 'Developing a systematic approach'}
+- Area for improvement: ${userStats.drawdown > 8 ? 'Drawdown control needs attention' : userStats.win_rate < 50 ? 'Win rate enhancement should be prioritized' : userStats.consistency_score < 70 ? 'Work on execution consistency' : 'Minor refinements to scale effectiveness'}
+
+Strategic direction: ${userStats.profit_factor > 2 ? 'You have a proven edge - focus on scaling and diversification' : 'Continue developing and validating your trading approach before scaling'}.`;
+                }
+
+                const response = {
+                    question: question,
+                    answer: answer,
+                    category: category,
+                    created_at: new Date().toISOString()
+                };
+
+                addAIResponse(response);
+                document.getElementById('customQuestion').value = '';
+                hideLoading();
+            }, 3000);
+        }
+
+        // Existing functions from original code (with minor enhancements)
+        function loadAIResponses() {
+            // This would typically fetch from your backend
+            // For now, we'll use mock data
+            const responses = [
+                {
+                    question: "How can I improve my win rate?",
+                    answer: "Based on your trading data, focus on better entry timing and risk management. Consider using tighter stop losses and taking profits at key resistance levels.",
+                    category: "performance",
+                    created_at: new Date().toISOString()
+                }
+            ];
+
+            displayResponses(responses);
+        }
+
+        function displayResponses(responses) {
+            const container = document.getElementById('aiResponses');
+            const emptyState = document.getElementById('emptyResponses');
+
+            if (responses.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            container.innerHTML = responses.map(response => `
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full capitalize">
+                                ${response.category}
+                            </span>
+                            <span class="text-sm text-gray-500">
+                                ${new Date(response.created_at).toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <strong class="text-gray-700">Q:</strong>
+                        <p class="text-gray-800 ml-2">${response.question}</p>
+                    </div>
+                    <div>
+                        <strong class="text-gray-700">A:</strong>
+                        <p class="text-gray-800 ml-2">${response.answer}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showLoading() {
+            document.getElementById('loadingSpinner').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSpinner').classList.add('hidden');
+        }
+
+        function addAIResponse(response) {
+            // In a real implementation, this would save to the backend
+            const container = document.getElementById('aiResponses');
+            const emptyState = document.getElementById('emptyResponses');
+
+            emptyState.classList.add('hidden');
+
+            const responseHTML = `
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full capitalize">
+                                ${response.category}
+                            </span>
+                            <span class="text-sm text-gray-500">
+                                ${new Date(response.created_at).toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <strong class="text-gray-700">Q:</strong>
+                        <p class="text-gray-800 ml-2">${response.question}</p>
+                    </div>
+                    <div>
+                        <strong class="text-gray-700">A:</strong>
+                        <p class="text-gray-800 ml-2">${response.answer}</p>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = responseHTML + container.innerHTML;
+        }
+    </script>
+</body>
+</html>

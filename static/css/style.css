@@ -1,0 +1,11 @@
+
+:root{
+  --bg:#0b0f14;
+  --card:#0f1720;
+  --muted:#9aa6b2;
+  --accent:#00c851;
+}
+body{background:var(--bg); color:#e6eef3;}
+.card, .card-body {background:var(--card); border:1px solid rgba(255,255,255,0.03)}
+.table-dark>tbody>tr>td{border-top:1px solid rgba(255,255,255,0.03)}
+.navbar{border-bottom:1px solid rgba(255,255,255,0.03)}

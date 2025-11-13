@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Realtime Logs</h2>
+<div class="card bg-secondary p-3" style="height:60vh; overflow:auto" id="logBox"></div>
+<script>
+async function loadLogs(){
+  const res = await fetch('/api/logs');
+  const data = await res.json();
+  const box = document.getElementById('logBox');
+  box.innerHTML = '';
+  (data.logs||[]).slice(-200).reverse().forEach(l=>{
+    const p = document.createElement('div'); p.innerText = `[${l.timestamp}] ${l.level} - ${l.message}`; box.appendChild(p);
+  });
+}
+setInterval(loadLogs,3000); loadLogs();
+</script>
+{% endblock %}

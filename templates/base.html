@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Quantum Professional Trader - Institutional Trading Platform{% endblock %}</title>
+
+    <!-- Professional Assets -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <style>
+        :root {
+            --primary-dark: #0a0f1c;
+            --primary-color: #131b2e;
+            --secondary-color: #1e2a45;
+            --accent-color: #1e40af;
+            --accent-glow: #2563eb;
+            --gold-accent: #d97706;
+            --platinum: #f1f5f9;
+            --success-color: #059669;
+            --danger-color: #dc2626;
+            --warning-color: #d97706;
+            --info-color: #0891b2;
+            --neon-glow: 0 0 20px rgba(30, 64, 175, 0.2);
+            --gold-glow: 0 0 15px rgba(217, 119, 6, 0.2);
+        }
+
+        .quantum-sidebar {
+            background: linear-gradient(180deg, var(--primary-dark) 0%, var(--primary-color) 50%, #0f172a 100%);
+            min-height: 100vh;
+            color: white;
+            box-shadow: 4px 0 25px rgba(0,0,0,0.3);
+            border-right: 1px solid rgba(30, 64, 175, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quantum-sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold-accent), var(--accent-color), transparent);
+            animation: shimmer 4s infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.8; }
+        }
+
+        .quantum-sidebar .nav-link {
+            color: #e5e7eb;
+            padding: 14px 18px;
+            margin: 4px 0;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid transparent;
+            font-size: 0.9rem;
+        }
+
+        .quantum-sidebar .nav-link::before {
+            content: '';
+            position: absolute;
+            left: -100%;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(30, 64, 175, 0.1), transparent);
+            transition: left 0.6s;
+        }
+
+        .quantum-sidebar .nav-link:hover {
+            background: rgba(30, 64, 175, 0.08);
+            color: var(--platinum);
+            transform: translateX(5px);
+            box-shadow: var(--neon-glow);
+            border-color: rgba(30, 64, 175, 0.2);
+        }
+
+        .quantum-sidebar .nav-link:hover::before {
+            left: 100%;
+        }
+
+        .quantum-sidebar .nav-link.active {
+            background: linear-gradient(135deg, rgba(30, 64, 175, 0.15), rgba(37, 99, 235, 0.1));
+            color: var(--platinum);
+            box-shadow: var(--neon-glow);
+            border-left: 3px solid var(--gold-accent);
+            border-color: rgba(30, 64, 175, 0.3);
+        }
+
+        .quantum-sidebar .nav-link i {
+            width: 20px;
+            margin-right: 12px;
+            text-align: center;
+            font-size: 1.1em;
+            color: var(--gold-accent);
+        }
+
+        .quantum-main {
+            background: linear-gradient(135deg, #0a0f1c 0%, #131b2e 50%, #0a0f1c 100%);
+            min-height: 100vh;
+            color: #f3f4f6;
+            position: relative;
+        }
+
+        .quantum-main::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 80%, rgba(30, 64, 175, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(217, 119, 6, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .quantum-card {
+            background: rgba(19, 27, 46, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(30, 64, 175, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quantum-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--gold-accent), var(--accent-color), var(--gold-accent));
+            background-size: 200% 100%;
+            animation: gradientShift 4s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .quantum-card:hover {
+            transform: translateY(-5px) scale(1.01);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35), var(--neon-glow);
+            border-color: rgba(30, 64, 175, 0.4);
+        }
+
+        .quantum-stats {
+            background: linear-gradient(135deg, rgba(19, 27, 46, 0.95), rgba(10, 15, 28, 0.95));
+            border: 1px solid rgba(30, 64, 175, 0.25);
+        }
+
+        .stat-number {
+            font-size: 2.4rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--gold-accent), var(--accent-glow), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+            letter-spacing: -0.5px;
+        }
+
+        .stat-label {
+            color: #9ca3af;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .quantum-navbar {
+            background: rgba(10, 15, 28, 0.95);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(30, 64, 175, 0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            padding: 0.9rem 0;
+        }
+
+        .quantum-logo {
+            font-weight: 700;
+            font-size: 1.6rem;
+            background: linear-gradient(135deg, var(--gold-accent), var(--accent-glow), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .platform-subtitle {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--platinum);
+            margin-bottom: 0.4rem;
+        }
+
+        .page-subtitle {
+            font-size: 0.9rem;
+            color: #9ca3af;
+            font-weight: 500;
+        }
+
+        .quantum-btn {
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-glow));
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+        }
+
+        .quantum-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .quantum-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+            color: white;
+        }
+
+        .quantum-btn:hover::before {
+            left: 100%;
+        }
+
+        .quantum-btn-gold {
+            background: linear-gradient(135deg, var(--gold-accent), #f59e0b);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+
+        .quantum-btn-gold:hover {
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+        }
+
+        .status-pulse {
+            animation: pulse-gold 3s infinite;
+        }
+
+        @keyframes pulse-gold {
+            0% {
+                box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.5),
+                           inset 0 0 15px rgba(217, 119, 6, 0.2);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(217, 119, 6, 0),
+                           inset 0 0 15px rgba(217, 119, 6, 0.1);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(217, 119, 6, 0),
+                           inset 0 0 15px rgba(217, 119, 6, 0.2);
+            }
+        }
+
+        .glow-text {
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        .dropdown-menu {
+            background: rgba(19, 27, 46, 0.95);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(30, 64, 175, 0.25);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+            border-radius: 14px;
+            padding: 10px;
+        }
+
+        .dropdown-item {
+            color: #d1d5db;
+            padding: 12px 16px;
+            transition: all 0.3s;
+            border-radius: 8px;
+            margin: 2px 0;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .dropdown-item:hover {
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-glow));
+            color: white;
+            transform: translateX(8px);
+            box-shadow: var(--neon-glow);
+        }
+
+        .nav-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(30, 64, 175, 0.2), transparent);
+            margin: 16px 0;
+        }
+
+        .ai-indicator {
+            background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 16px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            animation: ai-pulse 4s infinite;
+        }
+
+        @keyframes ai-pulse {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 0.9; transform: scale(1.03); }
+        }
+
+        .feature-badge {
+            background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .analytics-indicator {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Quantum Sidebar -->
+            <div class="col-md-2 col-xl-2 quantum-sidebar p-0">
+                <div class="p-4">
+                    <!-- Enhanced Header -->
+                    <div class="text-center mb-4">
+                        <h3 class="quantum-logo mb-1">QUANTUM PROFESSIONAL</h3>
+                        <div class="platform-subtitle">INSTITUTIONAL TRADING PLATFORM</div>
+
+                        <!-- Connection Status -->
+                        <div class="mt-3">
+                            {% if mt5_connected %}
+                                <span class="badge status-pulse bg-success px-3 py-2">
+                                    <i class="fas fa-satellite-dish me-2"></i>LIVE TRADING
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning px-3 py-2">
+                                    <i class="fas fa-flask me-2"></i>DEMO MODE
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Main Navigation -->
+                    <ul class="nav flex-column">
+                        <!-- Core Trading -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'professional_dashboard' %}active{% endif %}" href="{{ url_for('professional_dashboard') }}">
+                                <i class="fas fa-rocket"></i> Executive Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'journal' %}active{% endif %}" href="{{ url_for('journal') }}">
+                                <i class="fas fa-book"></i> Trade Journal
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'trade_plan' %}active{% endif %}" href="{{ url_for('trade_plan') }}">
+                                <i class="fas fa-chess-board"></i> Strategic Planning
+                            </a>
+                        </li>
+
+                        <!-- Psychology & AI -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'psychology_log' %}active{% endif %}" href="{{ url_for('psychology_log') }}">
+                                <i class="fas fa-brain"></i> Psychology Log
+                                <span class="feature-badge">NEW</span>
+                            </a>
+                        </li>
+
+                        <div class="nav-divider"></div>
+
+                        <!-- Advanced Analytics -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="analyticsDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-chart-network"></i> Performance Metrics
+                                <span class="analytics-indicator">AI</span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('statistics_dashboard') }}">
+                                    <i class="fas fa-chart-bar me-2"></i>Performance Dashboard
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('risk_analysis') }}">
+                                    <i class="fas fa-shield-alt me-2"></i>Risk Analytics
+                                    <span class="feature-badge">PRO</span>
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('trend_analysis') }}">
+                                    <i class="fas fa-trend-up me-2"></i>Trend Analysis
+                                    <span class="feature-badge">PRO</span>
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('ai_qa') }}">
+                                    <i class="fas fa-robot me-2"></i>AI Market Analysis
+                                </a></li>
+                            </ul>
+                        </li>
+
+                        <!-- Quantum AI -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'quantum_ai_qa' %}active{% endif %}" href="{{ url_for('quantum_ai_qa') }}">
+                                <i class="fas fa-robot"></i> Quantum AI Q&A
+                                <span class="ai-indicator">AI</span>
+                            </a>
+                        </li>
+
+                        <div class="nav-divider"></div>
+
+                        <!-- System Management -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="systemDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-cogs"></i> System Management
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('debug_mt5_connection') }}">
+                                    <i class="fas fa-plug me-2"></i>Connection Diagnostics
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('debug_data_flow_test') }}">
+                                    <i class="fas fa-stream me-2"></i>Data Flow Analysis
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('configuration') }}">
+                                    <i class="fas fa-sliders-h me-2"></i>Platform Configuration
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('export_csv') }}">
+                                    <i class="fas fa-download me-2"></i>Export Data
+                                </a></li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <!-- Quick Actions Panel -->
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <h6 class="text-light opacity-75 mb-3 text-uppercase small">
+                            <i class="fas fa-bolt me-2"></i>Quantum Actions
+                        </h6>
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('quick_journal') }}" class="btn quantum-btn btn-sm">
+                                <i class="fas fa-plus-circle me-2"></i>Instant Trade
+                            </a>
+                            <a href="{{ url_for('quick_trade_plan') }}" class="btn quantum-btn btn-sm">
+                                <i class="fas fa-chess-queen me-2"></i>Strategic Plan
+                            </a>
+                            <a href="{{ url_for('quantum_ai_qa') }}" class="btn quantum-btn quantum-btn-gold btn-sm">
+                                <i class="fas fa-robot me-2"></i>AI Assistant
+                            </a>
+                            <a href="{{ url_for('risk_analysis') }}" class="btn btn-outline-warning btn-sm">
+                                <i class="fas fa-chart-line me-2"></i>Risk Check
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Platform Status & Stats -->
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                        <div class="text-center">
+                            <div class="mb-2">
+                                <small class="text-muted">Platform v2.1.0</small>
+                                <div class="mt-1">
+                                    <span class="badge bg-info">PROFESSIONAL EDITION</span>
+                                </div>
+                            </div>
+                            <div class="platform-stats">
+                                <small class="text-muted d-block">
+                                    <i class="fas fa-database me-1"></i>
+                                    <span id="live-trades">0</span> Live Trades
+                                </small>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="fas fa-sync-alt me-1"></i>
+                                    <span id="sync-status">Synced</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quantum Main Content -->
+            <div class="col-md-10 col-xl-10 quantum-main p-0">
+                <!-- Quantum Navigation -->
+                <nav class="navbar navbar-expand-lg quantum-navbar">
+                    <div class="container-fluid">
+                        <div class="d-flex align-items-center">
+                            <span class="navbar-text">
+                                <i class="fas fa-clock me-2 text-info"></i>
+                                <span id="current-time" class="fw-bold">{{ current_time }}</span> |
+                                <span class="text-muted" id="current-date">{{ current_date }}</span>
+                            </span>
+                            <span class="navbar-text ms-3">
+                                <i class="fas fa-chart-line me-2 text-success"></i>
+                                <span id="market-status">Market: Open</span>
+                            </span>
+                        </div>
+
+                        <div class="d-flex align-items-center">
+                            {% if current_user.is_authenticated %}
+                            <span class="navbar-text me-4">
+                                <i class="fas fa-user-shield me-2 text-warning"></i>
+                                <strong>{{ current_user.username }}</strong>
+                                <small class="text-muted ms-2">Professional Trader</small>
+                            </span>
+                            <div class="btn-group">
+                                <a href="{{ url_for('configuration') }}" class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-cog me-1"></i> Settings
+                                </a>
+                                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">
+                                    <i class="fas fa-sign-out-alt me-1"></i> Logout
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Quantum Content Area -->
+                <div class="container-fluid p-4" style="position: relative; z-index: 1;">
+                    <!-- Flash Messages -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show quantum-card border-0 mb-4">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas
+                                            {% if category == 'success' %}fa-check-circle text-success
+                                            {% elif category == 'danger' or category == 'error' %}fa-exclamation-triangle text-danger
+                                            {% elif category == 'warning' %}fa-exclamation-circle text-warning
+                                            {% else %}fa-info-circle text-info{% endif %}
+                                            me-3 fa-lg"></i>
+                                        <div class="flex-grow-1">
+                                            <strong class="d-block">{{ category.upper() }}</strong>
+                                            {{ message }}
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <!-- Dynamic Page Header -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h1 class="page-title" id="currentPageTitle">
+                                        {% block page_title %}Quantum Professional Trader{% endblock %}
+                                    </h1>
+                                    <p class="page-subtitle" id="currentPageSubtitle">
+                                        {% block page_subtitle %}Institutional Trading Platform{% endblock %}
+                                    </p>
+                                </div>
+                                <div class="text-end">
+                                    <div class="btn-group">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="window.location.reload()">
+                                            <i class="fas fa-sync-alt me-2"></i>Refresh
+                                        </button>
+                                        <button class="btn btn-outline-success btn-sm" onclick="quantumSocket.emit('force_sync')">
+                                            <i class="fas fa-satellite-dish me-2"></i>Sync Data
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Content Block -->
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quantum Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+    <script>
+        // Quantum Time Sync
+        function updateQuantumTime() {
+            const now = new Date();
+            const timeOptions = {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            };
+            const dateOptions = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            };
+
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US', timeOptions);
+            document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', dateOptions);
+        }
+        setInterval(updateQuantumTime, 1000);
+        updateQuantumTime();
+
+        // Quantum Socket Connection
+        const quantumSocket = io('/realtime');
+
+        quantumSocket.on('connect', function() {
+            console.log('🔗 Quantum Link Established');
+            updateConnectionStatus(true);
+        });
+
+        quantumSocket.on('data_update', function(data) {
+            console.log('📊 Quantum Data Stream:', data);
+            updateRealTimeData(data);
+        });
+
+        quantumSocket.on('disconnect', function() {
+            console.log('⚠️ Quantum Link Interrupted');
+            updateConnectionStatus(false);
+        });
+
+        function updateConnectionStatus(connected) {
+            const statusElement = document.querySelector('.navbar-text .badge');
+            if (statusElement) {
+                if (connected) {
+                    statusElement.className = 'badge bg-success ms-2';
+                    statusElement.innerHTML = '<i class="fas fa-link me-1"></i>LIVE';
+                } else {
+                    statusElement.className = 'badge bg-danger ms-2';
+                    statusElement.innerHTML = '<i class="fas fa-unlink me-1"></i>OFFLINE';
+                }
+            }
+        }
+
+        // Dynamic Page Title Updates
+        function updatePageTitles() {
+            const path = window.location.pathname;
+            const titleMap = {
+                '/': {
+                    title: 'Executive Dashboard',
+                    subtitle: 'Real-time Institutional Analytics'
+                },
+                '/professional_dashboard': {
+                    title: 'Executive Dashboard',
+                    subtitle: 'Real-time Institutional Analytics'
+                },
+                '/journal': {
+                    title: 'Trade Journal',
+                    subtitle: 'Professional Trade Management'
+                },
+                '/trade_plan': {
+                    title: 'Strategic Planning',
+                    subtitle: 'Advanced Trade Strategy'
+                },
+                '/psychology_log': {
+                    title: 'Psychology Log',
+                    subtitle: 'Mindset & Emotional Tracking'
+                },
+                '/statistics_dashboard': {
+                    title: 'Performance Metrics',
+                    subtitle: 'Advanced Analytics & Reporting'
+                },
+                '/risk_analysis': {
+                    title: 'Risk Analytics',
+                    subtitle: 'Comprehensive Risk Assessment'
+                },
+                '/trend_analysis': {
+                    title: 'Trend Analysis',
+                    subtitle: 'Market & Performance Trends'
+                },
+                '/quantum_ai_qa': {
+                    title: 'Quantum AI Q&A',
+                    subtitle: 'Artificial Intelligence Assistant'
+                },
+                '/ai_qa': {
+                    title: 'AI Market Analysis',
+                    subtitle: 'Artificial Intelligence Insights'
+                },
+                '/configuration': {
+                    title: 'Platform Configuration',
+                    subtitle: 'System Settings & Preferences'
+                },
+                '/debug_mt5_connection': {
+                    title: 'Connection Diagnostics',
+                    subtitle: 'MT5 Connectivity Analysis'
+                },
+                '/debug_data_flow_test': {
+                    title: 'Data Flow Analysis',
+                    subtitle: 'System Performance Monitoring'
+                },
+                '/quick_journal': {
+                    title: 'Instant Trade Entry',
+                    subtitle: 'Rapid Trade Documentation'
+                },
+                '/quick_trade_plan': {
+                    title: 'Quick Strategic Plan',
+                    subtitle: 'Rapid Trading Strategy'
+                },
+                '/export_csv': {
+                    title: 'Data Export',
+                    subtitle: 'Export Trading Data'
+                }
+            };
+
+            const pageInfo = titleMap[path] || {
+                title: 'Quantum Professional',
+                subtitle: 'Institutional Trading Platform'
+            };
+
+            // Update page titles
+            const titleElement = document.getElementById('currentPageTitle');
+            const subtitleElement = document.getElementById('currentPageSubtitle');
+
+            if (titleElement) titleElement.textContent = pageInfo.title;
+            if (subtitleElement) subtitleElement.textContent = pageInfo.subtitle;
+
+            // Update browser tab title
+            document.title = `${pageInfo.title} - Quantum Professional Trader`;
+        }
+
+        // Active Navigation Highlighting
+        function updateActiveNavigation() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+
+                const linkPath = link.getAttribute('href');
+                if (linkPath === currentPath ||
+                   (currentPath === '/' && linkPath.includes('professional_dashboard')) ||
+                   (currentPath === '' && linkPath.includes('professional_dashboard'))) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        // Quantum UI Enhancements
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePageTitles();
+            updateActiveNavigation();
+
+            // Enhanced card interactions
+            const cards = document.querySelectorAll('.quantum-card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px) scale(1.01)';
+                });
+
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+
+            // Auto-dismiss flash messages
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    if (alert.classList.contains('show')) {
+                        const bsAlert = new bootstrap.Alert(alert);
+                        bsAlert.close();
+                    }
+                }, 5000);
+            });
+
+            // Initialize tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            const tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Update live stats
+            updateLiveStats();
+        });
+
+        // Handle navigation changes
+        window.addEventListener('popstate', function() {
+            updatePageTitles();
+            updateActiveNavigation();
+        });
+
+        // Live Stats Updates
+        function updateLiveStats() {
+            // Simulate live data updates
+            setInterval(() => {
+                const liveTrades = Math.floor(Math.random() * 15) + 1;
+                document.getElementById('live-trades').textContent = liveTrades;
+
+                const syncStatus = Math.random() > 0.1 ? 'Synced' : 'Syncing...';
+                document.getElementById('sync-status').textContent = syncStatus;
+            }, 5000);
+        }
+
+        console.log('🚀 Quantum Professional Dashboard v2.1.0 - Fully Initialized');
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

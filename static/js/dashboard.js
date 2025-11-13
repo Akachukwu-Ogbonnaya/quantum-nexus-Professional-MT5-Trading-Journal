@@ -1,0 +1,1 @@
+console.log('MT5 Journal v2 loaded');

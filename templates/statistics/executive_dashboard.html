@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Professional Traders Journal</title>
+
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --secondary: #7209b7;
+            --success: #4cc9f0;
+            --danger: #f72585;
+            --warning: #f8961e;
+            --info: #4895ef;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --gray-light: #e9ecef;
+            --border-radius: 12px;
+            --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .statistics-dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header Styles */
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 2rem;
+            box-shadow: var(--box-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dashboard-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(30%, -30%);
+        }
+
+        .dashboard-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .dashboard-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+        }
+
+        /* Navigation Styles */
+        .stats-navigation {
+            background: white;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 2rem;
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: var(--gray-light);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-tab:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .nav-tab.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+        }
+
+        /* Control Bar */
+        .control-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        .period-selector {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .period-selector select {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--gray-light);
+            border-radius: 8px;
+            background: white;
+            font-weight: 500;
+            min-width: 180px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .period-selector select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+
+        .export-controls {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .export-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .export-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+        }
+
+        .export-btn.csv { background: var(--info); }
+        .export-btn.csv:hover { background: #3a7bd5; }
+
+        .export-btn.pdf { background: var(--danger); }
+        .export-btn.pdf:hover { background: #e1156f; }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* KPI Cards */
+        .kpi-section {
+            margin-bottom: 2rem;
+        }
+
+        .kpi-section h3 {
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .kpi-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+            border-left: 4px solid var(--primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .kpi-card.profit { border-left-color: var(--success); }
+        .kpi-card.win-rate { border-left-color: var(--info); }
+        .kpi-card.profit-factor { border-left-color: var(--warning); }
+        .kpi-card.drawdown { border-left-color: var(--danger); }
+        .kpi-card.expectancy { border-left-color: #9d4edd; }
+        .kpi-card.sharpe { border-left-color: #ff9e00; }
+
+        .kpi-icon {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            opacity: 0.2;
+        }
+
+        .kpi-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .kpi-label {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .kpi-change {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .kpi-change.positive { color: var(--success); }
+        .kpi-change.negative { color: var(--danger); }
+
+        .kpi-subtext {
+            font-size: 0.8rem;
+            color: var(--gray);
+        }
+
+        /* Chart Containers */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        .chart-container h4 {
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-stats {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        /* Analytics Grid */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-card h4 {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            color: var(--dark);
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .metric-description {
+            font-size: 0.8rem;
+            color: var(--gray);
+        }
+
+        /* Calendar Styles */
+        .calendar-grid {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .calendar-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .day-header {
+            padding: 1rem;
+        }
+
+        .calendar-week {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .calendar-week:last-child {
+            border-bottom: none;
+        }
+
+        .calendar-day {
+            min-height: 100px;
+            padding: 0.5rem;
+            border-right: 1px solid var(--gray-light);
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+        }
+
+        .calendar-day:last-child {
+            border-right: none;
+        }
+
+        .calendar-day.empty {
+            background: var(--gray-light);
+        }
+
+        .calendar-day.has-data {
+            cursor: pointer;
+        }
+
+        .calendar-day.has-data:hover {
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        .day-number {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .day-pnl {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .day-pnl.positive { color: var(--success); }
+        .day-pnl.negative { color: var(--danger); }
+
+        .day-trades {
+            font-size: 0.75rem;
+            color: var(--gray);
+        }
+
+        /* Table Styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--box-shadow);
+            margin-bottom: 2rem;
+        }
+
+        .data-table th {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover {
+            background: rgba(67, 97, 238, 0.05);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .kpi-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .control-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .export-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .export-btn {
+                flex: 1;
+                justify-content: center;
+            }
+
+            .data-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="statistics-dashboard">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <h1><i class="fas fa-chart-line"></i> Quantum Professional Traders Journal</h1>
+            <p>Comprehensive analysis of your trading performance across all metrics</p>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="stats-navigation">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="tab-overview">
+                    <i class="fas fa-tachometer-alt"></i> Overview
+                </button>
+                <button class="nav-tab" data-tab="tab-analytics">
+                    <i class="fas fa-chart-bar"></i> Advanced Analytics
+                </button>
+                <button class="nav-tab" data-tab="tab-risk">
+                    <i class="fas fa-shield-alt"></i> Risk Management
+                </button>
+                <button class="nav-tab" data-tab="tab-calendar">
+                    <i class="fas fa-calendar-alt"></i> Performance Calendar
+                </button>
+                <button class="nav-tab" data-tab="tab-symbols">
+                    <i class="fas fa-coins"></i> Symbol Analysis
+                </button>
+                <button class="nav-tab" data-tab="tab-strategies">
+                    <i class="fas fa-chess-knight"></i> Strategy Performance
+                </button>
+                <button class="nav-tab" data-tab="tab-detailed">
+                    <i class="fas fa-file-alt"></i> Detailed Statistics
+                </button>
+            </div>
+        </div>
+
+        <!-- Control Bar -->
+        <div class="control-bar">
+            <div class="period-selector">
+                <label for="periodSelect"><i class="fas fa-filter"></i> Time Period:</label>
+                <select id="periodSelect">
+                    <option value="daily">Today</option>
+                    <option value="weekly">This Week</option>
+                    <option value="monthly" selected>This Month</option>
+                    <option value="3months">Last 3 Months</option>
+                    <option value="6months">Last 6 Months</option>
+                    <option value="1year">Last Year</option>
+                    <option value="all">All Time</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+
+                <!-- Custom Date Range (hidden by default) -->
+                <div id="customRange" style="display: none;">
+                    <input type="date" id="startDate">
+                    <span> to </span>
+                    <input type="date" id="endDate">
+                    <button class="export-btn" onclick="applyCustomRange()">Apply</button>
+                </div>
+            </div>
+
+            <div class="export-controls">
+                <a href="#" class="export-btn csv">
+                    <i class="fas fa-file-csv"></i> Export CSV
+                </a>
+                <a href="#" class="export-btn pdf">
+                    <i class="fas fa-file-pdf"></i> Export PDF
+                </a>
+                <button class="export-btn" onclick="screenshotDashboard()">
+                    <i class="fas fa-camera"></i> Screenshot
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab Contents -->
+        <div id="tab-overview" class="tab-content active">
+            <!-- KPI Cards -->
+            <div class="kpi-section">
+                <h3><i class="fas fa-tachometer-alt"></i> Performance Overview</h3>
+
+                <div class="kpi-cards">
+                    <div class="kpi-card profit">
+                        <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="net-profit">$12,458.75</div>
+                            <div class="kpi-label">Net Profit</div>
+                            <div class="kpi-change positive">+5.2%</div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card win-rate">
+                        <div class="kpi-icon"><i class="fas fa-bullseye"></i></div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="win-rate">68.4%</div>
+                            <div class="kpi-label">Win Rate</div>
+                            <div class="kpi-subtext">143/209 Winning Trades</div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card profit-factor">
+                        <div class="kpi-icon"><i class="fas fa-balance-scale"></i></div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="profit-factor">2.36</div>
+                            <div class="kpi-label">Profit Factor</div>
+                            <div class="kpi-subtext">$28,450/$12,058</div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card drawdown">
+                        <div class="kpi-icon"><i class="fas fa-chart-line-down"></i></div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="max-drawdown">8.7%</div>
+                            <div class="kpi-label">Max Drawdown</div>
+                            <div class="kpi-change">Current: 2.1%</div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card expectancy">
+                        <div class="kpi-icon"><i class="fas fa-calculator"></i></div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="expectancy">$59.61</div>
+                            <div class="kpi-label">Expectancy</div>
+                            <div class="kpi-subtext">Per Trade Average</div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card sharpe">
+                        <div class="kpi-icon"><i class="fas fa-dice"></i></div>
+                        <div class="kpi-content">
+                            <div class="kpi-value" id="sharpe-ratio">1.84</div>
+                            <div class="kpi-label">Sharpe Ratio</div>
+                            <div class="kpi-subtext">Risk-Adjusted Return</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Distribution -->
+            <div class="chart-grid">
+                <div class="chart-container">
+                    <h4><i class="fas fa-chart-pie"></i> Trade Outcomes</h4>
+                    <canvas id="outcomePieChart" width="300" height="300"></canvas>
+                    <div class="chart-stats">
+                        <div>Winning: 143 (68.4%)</div>
+                        <div>Losing: 58</div>
+                        <div>Break-even: 8</div>
+                        <div>Total: 209 trades</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h4><i class="fas fa-coins"></i> Symbol Performance</h4>
+                    <canvas id="symbolPieChart" width="300" height="300"></canvas>
+                    <div class="chart-stats">
+                        <div>Best: EURUSD</div>
+                        <div>Worst: GBPJPY</div>
+                        <div>Total Symbols: 12</div>
+                        <div>Most Traded: XAUUSD</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h4><i class="fas fa-chess-knight"></i> Strategy Performance</h4>
+                    <canvas id="strategyPieChart" width="300" height="300"></canvas>
+                    <div class="chart-stats">
+                        <div>Total Strategies: 6</div>
+                        <div>Best: Breakout</div>
+                        <div>Worst: Scalping</div>
+                        <div>Success Rate: 72%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-analytics" class="tab-content">
+            <div class="kpi-section">
+                <h3><i class="fas fa-chart-bar"></i> Advanced Performance Analytics</h3>
+
+                <div class="analytics-grid">
+                    <div class="metric-card">
+                        <h4>Risk-Adjusted Returns</h4>
+                        <div class="metric-value">1.84</div>
+                        <div class="metric-label">Sharpe Ratio</div>
+                        <div class="metric-description">Higher is better, above 1 is good</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <h4>Recovery Capability</h4>
+                        <div class="metric-value">3.21</div>
+                        <div class="metric-label">Recovery Factor</div>
+                        <div class="metric-description">Profit vs Drawdown recovery</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <h4>Position Sizing</h4>
+                        <div class="metric-value">12.4%</div>
+                        <div class="metric-label">Kelly Criterion</div>
+                        <div class="metric-description">Optimal position size</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <h4>Trade Expectancy</h4>
+                        <div class="metric-value">$59.61</div>
+                        <div class="metric-label">Expectancy per Trade</div>
+                        <div class="metric-description">Average expected profit</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h4><i class="fas fa-wave-square"></i> Equity Curve</h4>
+                    <canvas id="equityCurveChart" width="400" height="200"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h4><i class="fas fa-chart-area"></i> Monthly Performance</h4>
+                    <canvas id="monthlyPerformanceChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-risk" class="tab-content">
+            <div class="kpi-section">
+                <h3><i class="fas fa-shield-alt"></i> Risk Management Analysis</h3>
+
+                <div class="chart-grid">
+                    <div class="chart-container">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Risk Distribution</h4>
+                        <canvas id="riskDistributionChart" width="400" height="300"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h4><i class="fas fa-balance-scale"></i> Risk-Reward Profile</h4>
+                        <canvas id="rrDistributionChart" width="400" height="300"></canvas>
+                        <div class="chart-stats">
+                            <div>Avg R:R: 1.8</div>
+                            <div>Median R:R: 1.6</div>
+                            <div>Success Rate: 68.4%</div>
+                            <div>Required Win Rate: 35.7%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analytics-grid">
+                    <div class="metric-card">
+                        <h4>Risk per Trade</h4>
+                        <div class="metric-value">1.8%</div>
+                        <div class="metric-label">Average Risk</div>
+                        <div class="metric-description">Per trade risk exposure</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <h4>Max Risk</h4>
+                        <div class="metric-value">4.2%</div>
+                        <div class="metric-label">Highest Single Trade</div>
+                        <div class="metric-description">Maximum risk taken</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <h4>Consistency</h4>
+                        <div class="metric-value">87%</div>
+                        <div class="metric-label">Risk Adherence</div>
+                        <div class="metric-description">Following risk rules</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <h4>Volatility</h4>
+                        <div class="metric-value">12.3</div>
+                        <div class="metric-label">Portfolio Volatility</div>
+                        <div class="metric-description">Standard deviation of returns</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-calendar" class="tab-content">
+            <div class="kpi-section">
+                <h3><i class="fas fa-calendar-alt"></i> Performance Calendar - <span id="calendar-month">October 2023</span></h3>
+
+                <div class="control-bar" style="margin-top: 0;">
+                    <div class="period-selector">
+                        <button class="export-btn" id="prev-month"><i class="fas fa-chevron-left"></i> Previous</button>
+                        <span style="padding: 0 1rem; font-weight: 600;" id="current-month">October 2023</span>
+                        <button class="export-btn" id="next-month">Next <i class="fas fa-chevron-right"></i></button>
+                    </div>
+
+                    <div class="export-controls">
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div><span style="background: #e9f7ef; padding: 4px 8px; border-radius: 4px; color: #28a745;">Green = Profitable</span></div>
+                            <div><span style="background: #fde8e8; padding: 4px 8px; border-radius: 4px; color: #dc3545;">Red = Losing</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="calendar-grid" id="calendar-container">
+                    <!-- Calendar will be generated dynamically -->
+                </div>
+
+                <div class="chart-container">
+                    <h4><i class="fas fa-chart-line"></i> Monthly Performance Trend</h4>
+                    <canvas id="monthlyTrendChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-symbols" class="tab-content">
+            <div class="kpi-section">
+                <h3><i class="fas fa-coins"></i> Symbol Performance Analysis</h3>
+
+                <div class="chart-container">
+                    <h4><i class="fas fa-chart-bar"></i> Symbol Profitability</h4>
+                    <canvas id="symbolProfitabilityChart" width="400" height="300"></canvas>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Trades</th>
+                            <th>Win Rate</th>
+                            <th>Net Profit</th>
+                            <th>Avg Profit</th>
+                            <th>Profit Factor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>EURUSD</td>
+                            <td>45</td>
+                            <td>73.3%</td>
+                            <td style="color: #4cc9f0;">+$3,245</td>
+                            <td>$72.11</td>
+                            <td>3.12</td>
+                        </tr>
+                        <tr>
+                            <td>XAUUSD</td>
+                            <td>38</td>
+                            <td>68.4%</td>
+                            <td style="color: #4cc9f0;">+$2,876</td>
+                            <td>$75.68</td>
+                            <td>2.87</td>
+                        </tr>
+                        <tr>
+                            <td>GBPUSD</td>
+                            <td>32</td>
+                            <td>65.6%</td>
+                            <td style="color: #4cc9f0;">+$1,987</td>
+                            <td>$62.09</td>
+                            <td>2.45</td>
+                        </tr>
+                        <tr>
+                            <td>USDJPY</td>
+                            <td>28</td>
+                            <td>60.7%</td>
+                            <td style="color: #4cc9f0;">+$1,543</td>
+                            <td>$55.11</td>
+                            <td>2.21</td>
+                        </tr>
+                        <tr>
+                            <td>GBPJPY</td>
+                            <td>22</td>
+                            <td>45.5%</td>
+                            <td style="color: #f72585;">-$654</td>
+                            <td>-$29.73</td>
+                            <td>0.78</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="chart-grid">
+                    <div class="chart-container">
+                        <h4><i class="fas fa-chart-pie"></i> Trade Distribution by Symbol</h4>
+                        <canvas id="symbolDistributionChart" width="300" height="300"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h4><i class="fas fa-trending-up"></i> Symbol Performance Trend</h4>
+                        <canvas id="symbolTrendChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-strategies" class="tab-content">
+            <div class="kpi-section">
+                <h3><i class="fas fa-chess-knight"></i> Strategy Performance Analysis</h3>
+
+                <div class="chart-container">
+                    <h4><i class="fas fa-chart-bar"></i> Strategy Profitability</h4>
+                    <canvas id="strategyProfitabilityChart" width="400" height="300"></canvas>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Strategy</th>
+                            <th>Trades</th>
+                            <th>Win Rate</th>
+                            <th>Net Profit</th>
+                            <th>Profit Factor</th>
+                            <th>Avg Trade</th>
+                            <th>Expectancy</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Breakout</td>
+                            <td>52</td>
+                            <td>75.0%</td>
+                            <td style="color: #4cc9f0;">+$4,125</td>
+                            <td>3.45</td>
+                            <td>$79.33</td>
+                            <td>$85.21</td>
+                        </tr>
+                        <tr>
+                            <td>Trend Following</td>
+                            <td>48</td>
+                            <td>70.8%</td>
+                            <td style="color: #4cc9f0;">+$3,542</td>
+                            <td>2.98</td>
+                            <td>$73.79</td>
+                            <td>$72.45</td>
+                        </tr>
+                        <tr>
+                            <td>Mean Reversion</td>
+                            <td>41</td>
+                            <td>68.3%</td>
+                            <td style="color: #4cc9f0;">+$2,876</td>
+                            <td>2.67</td>
+                            <td>$70.15</td>
+                            <td>$65.32</td>
+                        </tr>
+                        <tr>
+                            <td>News Trading</td>
+                            <td>35</td>
+                            <td>62.9%</td>
+                            <td style="color: #4cc9f0;">+$1,987</td>
+                            <td>2.21</td>
+                            <td>$56.77</td>
+                            <td>$52.14</td>
+                        </tr>
+                        <tr>
+                            <td>Scalping</td>
+                            <td>33</td>
+                            <td>54.5%</td>
+                            <td style="color: #f72585;">-$1,072</td>
+                            <td>0.76</td>
+                            <td>-$32.48</td>
+                            <td>-$28.45</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="chart-grid">
+                    <div class="chart-container">
+                        <h4><i class="fas fa-chart-pie"></i> Strategy Distribution</h4>
+                        <canvas id="strategyDistributionChart" width="300" height="300"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h4><i class="fas fa-trending-up"></i> Strategy Performance Over Time</h4>
+                        <canvas id="strategyTrendChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-detailed" class="tab-content">
+            <div class="kpi-section">
+                <h3><i class="fas fa-file-alt"></i> Detailed Trading Statistics</h3>
+
+                <div class="chart-grid">
+                    <div class="chart-container">
+                        <h4><i class="fas fa-chart-bar"></i> Trade Duration Analysis</h4>
+                        <canvas id="tradeDurationChart" width="400" height="300"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h4><i class="fas fa-clock"></i> Time of Day Performance</h4>
+                        <canvas id="timeOfDayChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Total Trades</td>
+                            <td>209</td>
+                            <td>All executed trades in the selected period</td>
+                        </tr>
+                        <tr>
+                            <td>Winning Trades</td>
+                            <td>143</td>
+                            <td>Trades that resulted in profit</td>
+                        </tr>
+                        <tr>
+                            <td>Losing Trades</td>
+                            <td>58</td>
+                            <td>Trades that resulted in loss</td>
+                        </tr>
+                        <tr>
+                            <td>Break-even Trades</td>
+                            <td>8</td>
+                            <td>Trades with zero profit/loss</td>
+                        </tr>
+                        <tr>
+                            <td>Average Win</td>
+                            <td>$198.95</td>
+                            <td>Average profit of winning trades</td>
+                        </tr>
+                        <tr>
+                            <td>Average Loss</td>
+                            <td>-$124.32</td>
+                            <td>Average loss of losing trades</td>
+                        </tr>
+                        <tr>
+                            <td>Largest Win</td>
+                            <td>$1,245</td>
+                            <td>Highest profit from a single trade</td>
+                        </tr>
+                        <tr>
+                            <td>Largest Loss</td>
+                            <td>-$654</td>
+                            <td>Highest loss from a single trade</td>
+                        </tr>
+                        <tr>
+                            <td>Average Trade Duration</td>
+                            <td>4.2 hours</td>
+                            <td>Average time trades were held open</td>
+                        </tr>
+                        <tr>
+                            <td>Profit per Day</td>
+                            <td>$415.29</td>
+                            <td>Average daily profit</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="chart-container">
+                    <h4><i class="fas fa-calendar-week"></i> Day of Week Performance</h4>
+                    <canvas id="dayOfWeekChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // =============================================================================
+        // QUANTUM PROFESSIONAL TRADERS JOURNAL - FIXED VERSION
+        // =============================================================================
+
+        // Global variables
+        let currentPeriod = 'monthly';
+        let currentCalendarDate = new Date();
+
+        // Tab Navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching
+            const tabButtons = document.querySelectorAll('.nav-tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetTab = button.getAttribute('data-tab');
+
+                    // Update active tab
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+
+                    button.classList.add('active');
+                    document.getElementById(targetTab).classList.add('active');
+
+                    // Load chart data for the active tab
+                    loadTabCharts(targetTab);
+                });
+            });
+
+            // Period selector change
+            const periodSelect = document.getElementById('periodSelect');
+            if (periodSelect) {
+                periodSelect.addEventListener('change', function() {
+                    currentPeriod = this.value;
+
+                    if (this.value === 'custom') {
+                        document.getElementById('customRange').style.display = 'flex';
+                    } else {
+                        document.getElementById('customRange').style.display = 'none';
+                        updateStatisticsData(this.value);
+                    }
+                });
+
+                // Set current period in dropdown
+                const urlParams = new URLSearchParams(window.location.search);
+                const currentPeriod = urlParams.get('period') || 'monthly';
+                periodSelect.value = currentPeriod;
+            }
+
+            // Calendar navigation
+            document.getElementById('prev-month').addEventListener('click', function() {
+                currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+                updateCalendar();
+            });
+
+            document.getElementById('next-month').addEventListener('click', function() {
+                currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+                updateCalendar();
+            });
+
+            // Initialize charts with template data
+            initializeCharts();
+            updateCalendar();
+        });
+
+        function updateStatisticsPeriod() {
+            const period = document.getElementById('periodSelect').value;
+            updateStatisticsData(period);
+        }
+
+        function updateStatisticsData(period) {
+            // Show loading state
+            showLoading();
+
+            // In a real application, this would fetch data from your backend
+            console.log(`Updating statistics for period: ${period}`);
+
+            // Update KPI values based on period
+            updateKPIValues(period);
+
+            // Simulate API call
+            setTimeout(() => {
+                hideLoading();
+                // Update charts with new data
+                initializeCharts();
+            }, 1000);
+        }
+
+        function updateKPIValues(period) {
+            // This would normally come from an API, but we'll simulate it
+            const periodData = {
+                daily: {
+                    netProfit: '$542.75',
+                    winRate: '65.2%',
+                    profitFactor: '1.89',
+                    maxDrawdown: '1.2%',
+                    expectancy: '$48.32',
+                    sharpeRatio: '1.45'
+                },
+                weekly: {
+                    netProfit: '$2,458.25',
+                    winRate: '67.8%',
+                    profitFactor: '2.12',
+                    maxDrawdown: '3.4%',
+                    expectancy: '$54.67',
+                    sharpeRatio: '1.67'
+                },
+                monthly: {
+                    netProfit: '$12,458.75',
+                    winRate: '68.4%',
+                    profitFactor: '2.36',
+                    maxDrawdown: '8.7%',
+                    expectancy: '$59.61',
+                    sharpeRatio: '1.84'
+                },
+                '3months': {
+                    netProfit: '$28,542.50',
+                    winRate: '69.2%',
+                    profitFactor: '2.54',
+                    maxDrawdown: '12.3%',
+                    expectancy: '$62.45',
+                    sharpeRatio: '1.92'
+                },
+                '6months': {
+                    netProfit: '$54,876.25',
+                    winRate: '70.1%',
+                    profitFactor: '2.78',
+                    maxDrawdown: '15.6%',
+                    expectancy: '$65.32',
+                    sharpeRatio: '2.04'
+                },
+                '1year': {
+                    netProfit: '$124,542.80',
+                    winRate: '71.3%',
+                    profitFactor: '3.12',
+                    maxDrawdown: '18.2%',
+                    expectancy: '$68.45',
+                    sharpeRatio: '2.21'
+                },
+                all: {
+                    netProfit: '$287,654.35',
+                    winRate: '72.5%',
+                    profitFactor: '3.45',
+                    maxDrawdown: '22.4%',
+                    expectancy: '$72.12',
+                    sharpeRatio: '2.38'
+                }
+            };
+
+            const data = periodData[period] || periodData.monthly;
+
+            document.getElementById('net-profit').textContent = data.netProfit;
+            document.getElementById('win-rate').textContent = data.winRate;
+            document.getElementById('profit-factor').textContent = data.profitFactor;
+            document.getElementById('max-drawdown').textContent = data.maxDrawdown;
+            document.getElementById('expectancy').textContent = data.expectancy;
+            document.getElementById('sharpe-ratio').textContent = data.sharpeRatio;
+        }
+
+        function applyCustomRange() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (startDate && endDate) {
+                window.location.href = `/statistics?period=custom&start=${startDate}&end=${endDate}`;
+            } else {
+                alert('Please select both start and end dates');
+            }
+        }
+
+        function loadTabCharts(tabId) {
+            // In a real application, this would initialize charts specific to each tab
+            console.log(`Loading charts for tab: ${tabId}`);
+
+            // Initialize specific charts for each tab
+            if (tabId === 'tab-symbols') {
+                initializeSymbolCharts();
+            } else if (tabId === 'tab-strategies') {
+                initializeStrategyCharts();
+            } else if (tabId === 'tab-detailed') {
+                initializeDetailedCharts();
+            }
+        }
+
+        function updateCalendar() {
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ];
+
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+
+            document.getElementById('calendar-month').textContent = `${monthNames[month]} ${year}`;
+            document.getElementById('current-month').textContent = `${monthNames[month]} ${year}`;
+
+            // Generate calendar
+            generateCalendar(month, year);
+        }
+
+        function generateCalendar(month, year) {
+            const container = document.getElementById('calendar-container');
+            container.innerHTML = '';
+
+            // Create header
+            const header = document.createElement('div');
+            header.className = 'calendar-header';
+            header.innerHTML = `
+                <div class="day-header">Mon</div>
+                <div class="day-header">Tue</div>
+                <div class="day-header">Wed</div>
+                <div class="day-header">Thu</div>
+                <div class="day-header">Fri</div>
+                <div class="day-header">Sat</div>
+                <div class="day-header">Sun</div>
+            `;
+            container.appendChild(header);
+
+            // Get first day of month and number of days
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            // Adjust first day (Monday = 0, Sunday = 6)
+            let startDay = firstDay === 0 ? 6 : firstDay - 1;
+
+            let date = 1;
+            let calendarHTML = '';
+
+            // Create weeks
+            for (let i = 0; i < 6; i++) {
+                if (date > daysInMonth) break;
+
+                calendarHTML += '<div class="calendar-week">';
+
+                for (let j = 0; j < 7; j++) {
+                    if (i === 0 && j < startDay) {
+                        calendarHTML += '<div class="calendar-day empty"></div>';
+                    } else if (date > daysInMonth) {
+                        calendarHTML += '<div class="calendar-day empty"></div>';
+                    } else {
+                        // Generate random P&L data for demonstration
+                        const pnl = Math.random() > 0.4 ? Math.floor(Math.random() * 500) + 50 : -Math.floor(Math.random() * 200) - 10;
+                        const trades = Math.floor(Math.random() * 5) + 1;
+                        const pnlClass = pnl >= 0 ? 'positive' : 'negative';
+                        const pnlSign = pnl >= 0 ? '+' : '';
+
+                        calendarHTML += `
+                            <div class="calendar-day has-data">
+                                <div class="day-number">${date}</div>
+                                <div class="day-pnl ${pnlClass}">${pnlSign}$${pnl}</div>
+                                <div class="day-trades">${trades} trades</div>
+                            </div>
+                        `;
+                        date++;
+                    }
+                }
+
+                calendarHTML += '</div>';
+            }
+
+            container.innerHTML += calendarHTML;
+        }
+
+        function initializeCharts() {
+            // Performance Distribution Pie Chart
+            const outcomeCtx = document.getElementById('outcomePieChart');
+            if (outcomeCtx) {
+                // Calculate outcomes from KPI data
+                const winRate = parseFloat(document.querySelector('.kpi-card.win-rate .kpi-value').textContent);
+                const totalTrades = document.querySelector('.kpi-card.win-rate .kpi-subtext').textContent;
+                const matches = totalTrades.match(/(\d+)\/(\d+)/);
+
+                if (matches) {
+                    const winningTrades = parseInt(matches[1]);
+                    const total = parseInt(matches[2]);
+                    const losingTrades = total - winningTrades;
+                    const breakEvenTrades = 0; // You can calculate this if needed
+
+                    new Chart(outcomeCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Winning Trades', 'Losing Trades', 'Break-even'],
+                            datasets: [{
+                                data: [winningTrades, losingTrades, breakEvenTrades],
+                                backgroundColor: ['#4cc9f0', '#f72585', '#6c757d'],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                            return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Symbol Performance Pie Chart (placeholder - will be populated with real data)
+            const symbolCtx = document.getElementById('symbolPieChart');
+            if (symbolCtx) {
+                new Chart(symbolCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['EURUSD', 'XAUUSD', 'GBPUSD', 'USDJPY', 'Others'],
+                        datasets: [{
+                            data: [35, 28, 18, 12, 7],
+                            backgroundColor: ['#4361ee', '#4cc9f0', '#7209b7', '#f72585', '#ff9e00'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Strategy Performance Pie Chart
+            const strategyCtx = document.getElementById('strategyPieChart');
+            if (strategyCtx) {
+                new Chart(strategyCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Breakout', 'Trend', 'Scalping', 'Mean Reversion', 'Others'],
+                        datasets: [{
+                            data: [40, 25, 15, 12, 8],
+                            backgroundColor: ['#4361ee', '#4cc9f0', '#7209b7', '#f72585', '#ff9e00'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Equity Curve Chart (placeholder)
+            const equityCtx = document.getElementById('equityCurveChart');
+            if (equityCtx) {
+                new Chart(equityCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+                        datasets: [{
+                            label: 'Account Equity',
+                            data: [10000, 11200, 10800, 12500, 13200, 14000, 13800, 14500, 15200, 16458],
+                            borderColor: '#4361ee',
+                            backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Monthly Performance Chart
+            const monthlyCtx = document.getElementById('monthlyPerformanceChart');
+            if (monthlyCtx) {
+                new Chart(monthlyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+                        datasets: [{
+                            label: 'Monthly P&L',
+                            data: [1200, 800, -200, 1700, 700, 800, -200, 700, 700, 1258],
+                            backgroundColor: function(context) {
+                                const value = context.dataset.data[context.dataIndex];
+                                return value >= 0 ? '#4cc9f0' : '#f72585';
+                            },
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Risk Distribution Chart
+            const riskCtx = document.getElementById('riskDistributionChart');
+            if (riskCtx) {
+                new Chart(riskCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['0-0.5%', '0.5-1%', '1-1.5%', '1.5-2%', '2-2.5%', '2.5-3%', '3%+'],
+                        datasets: [{
+                            label: 'Number of Trades',
+                            data: [12, 45, 68, 52, 28, 15, 8],
+                            backgroundColor: '#4361ee',
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Risk-Reward Distribution Chart
+            const rrCtx = document.getElementById('rrDistributionChart');
+            if (rrCtx) {
+                new Chart(rrCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['< 0.5', '0.5-1', '1-1.5', '1.5-2', '2-2.5', '2.5-3', '3+'],
+                        datasets: [{
+                            label: 'Number of Trades',
+                            data: [8, 22, 45, 68, 42, 18, 6],
+                            backgroundColor: '#4cc9f0',
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Monthly Trend Chart
+            const trendCtx = document.getElementById('monthlyTrendChart');
+            if (trendCtx) {
+                new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30'],
+                        datasets: [{
+                            label: 'Daily P&L',
+                            data: [342, 187, -56, 423, 289, 154, -98, 267, 189, -45, 312, 245, 178, -67, 398, 234, 156, -23, 287, 198, 123, -34, 256, 189, 145, -12, 278, 234, 167, -45],
+                            borderColor: '#4361ee',
+                            backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function initializeSymbolCharts() {
+            // Symbol Profitability Chart
+            const symbolProfitCtx = document.getElementById('symbolProfitabilityChart');
+            if (symbolProfitCtx) {
+                new Chart(symbolProfitCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['EURUSD', 'XAUUSD', 'GBPUSD', 'USDJPY', 'GBPJPY'],
+                        datasets: [{
+                            label: 'Net Profit ($)',
+                            data: [3245, 2876, 1987, 1543, -654],
+                            backgroundColor: function(context) {
+                                const value = context.dataset.data[context.dataIndex];
+                                return value >= 0 ? '#4cc9f0' : '#f72585';
+                            },
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Symbol Distribution Chart
+            const symbolDistCtx = document.getElementById('symbolDistributionChart');
+            if (symbolDistCtx) {
+                new Chart(symbolDistCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['EURUSD', 'XAUUSD', 'GBPUSD', 'USDJPY', 'GBPJPY', 'Others'],
+                        datasets: [{
+                            data: [22, 18, 15, 13, 11, 21],
+                            backgroundColor: ['#4361ee', '#4cc9f0', '#7209b7', '#f72585', '#ff9e00', '#6c757d'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Symbol Trend Chart
+            const symbolTrendCtx = document.getElementById('symbolTrendChart');
+            if (symbolTrendCtx) {
+                new Chart(symbolTrendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+                        datasets: [
+                            {
+                                label: 'EURUSD',
+                                data: [245, 312, 278, 345, 298, 356, 312, 389, 423, 471],
+                                borderColor: '#4361ee',
+                                tension: 0.4,
+                                fill: false
+                            },
+                            {
+                                label: 'XAUUSD',
+                                data: [189, 234, 198, 267, 245, 278, 256, 312, 345, 389],
+                                borderColor: '#4cc9f0',
+                                tension: 0.4,
+                                fill: false
+                            },
+                            {
+                                label: 'GBPUSD',
+                                data: [156, 198, 167, 223, 189, 245, 212, 267, 298, 334],
+                                borderColor: '#7209b7',
+                                tension: 0.4,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function initializeStrategyCharts() {
+            // Strategy Profitability Chart
+            const strategyProfitCtx = document.getElementById('strategyProfitabilityChart');
+            if (strategyProfitCtx) {
+                new Chart(strategyProfitCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Breakout', 'Trend', 'Mean Reversion', 'News Trading', 'Scalping'],
+                        datasets: [{
+                            label: 'Net Profit ($)',
+                            data: [4125, 3542, 2876, 1987, -1072],
+                            backgroundColor: function(context) {
+                                const value = context.dataset.data[context.dataIndex];
+                                return value >= 0 ? '#4cc9f0' : '#f72585';
+                            },
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Strategy Distribution Chart
+            const strategyDistCtx = document.getElementById('strategyDistributionChart');
+            if (strategyDistCtx) {
+                new Chart(strategyDistCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Breakout', 'Trend Following', 'Mean Reversion', 'News Trading', 'Scalping'],
+                        datasets: [{
+                            data: [25, 23, 20, 17, 15],
+                            backgroundColor: ['#4361ee', '#4cc9f0', '#7209b7', '#f72585', '#ff9e00'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Strategy Trend Chart
+            const strategyTrendCtx = document.getElementById('strategyTrendChart');
+            if (strategyTrendCtx) {
+                new Chart(strategyTrendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+                        datasets: [
+                            {
+                                label: 'Breakout',
+                                data: [345, 412, 378, 456, 423, 489, 445, 512, 556, 612],
+                                borderColor: '#4361ee',
+                                tension: 0.4,
+                                fill: false
+                            },
+                            {
+                                label: 'Trend Following',
+                                data: [278, 334, 312, 389, 356, 412, 378, 445, 489, 534],
+                                borderColor: '#4cc9f0',
+                                tension: 0.4,
+                                fill: false
+                            },
+                            {
+                                label: 'Mean Reversion',
+                                data: [223, 278, 245, 312, 289, 345, 312, 378, 412, 456],
+                                borderColor: '#7209b7',
+                                tension: 0.4,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function initializeDetailedCharts() {
+            // Trade Duration Chart
+            const durationCtx = document.getElementById('tradeDurationChart');
+            if (durationCtx) {
+                new Chart(durationCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['< 1h', '1-4h', '4-8h', '8-24h', '1-3d', '3-7d', '> 7d'],
+                        datasets: [{
+                            label: 'Number of Trades',
+                            data: [35, 68, 42, 28, 18, 12, 6],
+                            backgroundColor: '#4361ee',
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Time of Day Chart
+            const timeCtx = document.getElementById('timeOfDayChart');
+            if (timeCtx) {
+                new Chart(timeCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['00-04', '04-08', '08-12', '12-16', '16-20', '20-24'],
+                        datasets: [{
+                            label: 'Net Profit ($)',
+                            data: [1245, 1876, 2345, 1987, 1678, 1323],
+                            backgroundColor: '#4cc9f0',
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Day of Week Chart
+            const dayCtx = document.getElementById('dayOfWeekChart');
+            if (dayCtx) {
+                new Chart(dayCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                        datasets: [{
+                            label: 'Net Profit ($)',
+                            data: [2345, 2876, 3123, 2654, 2987, 1456, 1234],
+                            backgroundColor: '#7209b7',
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function showLoading() {
+            // Implement loading indicator
+            document.body.style.cursor = 'wait';
+        }
+
+        function hideLoading() {
+            document.body.style.cursor = 'default';
+        }
+
+        function screenshotDashboard() {
+            alert('Screenshot functionality would be implemented here. In a real application, this would use a library like html2canvas.');
+        }
+    </script>
+</body>
+</html>
