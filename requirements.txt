@@ -1,15 +1,27 @@
+# Core Flask and extensions
 Flask==2.3.3
-flask-socketio==5.3.6
-python-socketio==5.8.0
-eventlet==0.33.3
-pandas>=2.3.0
-numpy==1.26.4
 Flask-Login==0.6.3
 Flask-WTF==1.2.1
 Flask-Session==0.5.0
 WTForms==3.1.2
+
+# SocketIO and async support
+flask-socketio==5.3.6
+python-socketio==5.8.0
+eventlet==0.33.3
+
+# Data analysis
+pandas==2.5.3
+numpy==1.26.4
+
+# Web server
 gunicorn==21.2.0
 setuptools==69.0.2
 cython==3.0.8
-psycopg[binary]
 
+# Database (PostgreSQL)
+psycopg[binary]==3.2.3
+
+# Optional Windows-only dependency (MetaTrader5)
+# Won’t break Railway deployment if it fails to install
+MetaTrader5==5.0.37
