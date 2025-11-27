@@ -5,4 +5,4 @@ builder = "nixpacks"
 startCommand = "gunicorn app:app"
 
 [env]
-PORT = 8000
+PORT = "8000"
