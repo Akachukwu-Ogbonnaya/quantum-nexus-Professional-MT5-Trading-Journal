@@ -34,16 +34,22 @@ from .calculators import (
     safe_float_conversion,
     calculate_risk_reward,
     calculate_trade_duration,
-    calculate_position_size,
-    calculate_max_drawdown,
-    calculate_sharpe_ratio,
-    calculate_recovery_factor,
-    calculate_expectancy,
-    calculate_kelly_criterion,
-    calculate_consecutive_streaks,
-    calculate_account_change_percent,
-    ProfessionalTradingCalculator
+    ProfessionalTradingCalculator,  # Import the class
+    ProfessionalStatisticsGenerator,
+    trading_calc,
+    stats_generator,
+    create_empty_stats
 )
+
+# Create module-level aliases for the ProfessionalTradingCalculator static methods
+calculate_position_size = ProfessionalTradingCalculator.calculate_position_size
+calculate_max_drawdown = ProfessionalTradingCalculator.calculate_max_drawdown
+calculate_sharpe_ratio = ProfessionalTradingCalculator.calculate_sharpe_ratio
+calculate_recovery_factor = ProfessionalTradingCalculator.calculate_recovery_factor
+calculate_expectancy = ProfessionalTradingCalculator.calculate_expectancy
+calculate_kelly_criterion = ProfessionalTradingCalculator.calculate_kelly_criterion
+calculate_consecutive_streaks = ProfessionalTradingCalculator.calculate_consecutive_streaks
+calculate_account_change_percent = ProfessionalTradingCalculator.calculate_account_change_percent
 
 # ---------------------------------------------------------------------
 # CONFIGURATION UTILITIES
@@ -103,6 +109,10 @@ __all__ = [
     'calculate_consecutive_streaks',
     'calculate_account_change_percent',
     'ProfessionalTradingCalculator',
+    'ProfessionalStatisticsGenerator',
+    'trading_calc',
+    'stats_generator',
+    'create_empty_stats',
     
     # Configuration utilities
     'ConfigManager',
