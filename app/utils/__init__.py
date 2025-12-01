@@ -1,4 +1,6 @@
-# app/utils/__init__.py
+# -----------------------------------------------------------------------------
+# UTILITY MODULE IMPORTS
+# -----------------------------------------------------------------------------
 import os
 import sys
 import platform
@@ -16,17 +18,18 @@ import socket
 import subprocess
 from flask import current_app
 
-# Import all utility modules
+# ---------------------------------------------------------------------
+# DATABASE UTILITIES
+# ---------------------------------------------------------------------
+# Only import what actually exists in database.py
 from .database import (
-    HybridDatabaseManager, 
-    get_db_connection, 
-    universal_execute, 
-    conn_fetch_dataframe,
-    init_database,
-    get_universal_connection,
-    DatabaseMigrator
+    HybridDatabaseManager,  # Main hybrid database manager
+    init_database           # Function to initialize schema (SQLite/PostgreSQL)
 )
 
+# ---------------------------------------------------------------------
+# CALCULATOR UTILITIES
+# ---------------------------------------------------------------------
 from .calculators import (
     safe_float_conversion,
     calculate_risk_reward,
@@ -42,6 +45,9 @@ from .calculators import (
     ProfessionalTradingCalculator
 )
 
+# ---------------------------------------------------------------------
+# CONFIGURATION UTILITIES
+# ---------------------------------------------------------------------
 from .config import (
     ConfigManager,
     get_hybrid_config_path,
@@ -49,6 +55,9 @@ from .config import (
     validate_csrf
 )
 
+# ---------------------------------------------------------------------
+# SYSTEM INFO UTILITIES
+# ---------------------------------------------------------------------
 from .system_info import (
     detect_environment,
     get_platform_specific_config,
@@ -57,6 +66,9 @@ from .system_info import (
     should_reset_database
 )
 
+# ---------------------------------------------------------------------
+# INSTALLER / DESKTOP SETUP UTILITIES
+# ---------------------------------------------------------------------
 from .installer import (
     setup_desktop_environment,
     setup_auto_start,
