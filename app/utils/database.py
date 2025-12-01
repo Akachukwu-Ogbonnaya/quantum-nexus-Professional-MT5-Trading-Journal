@@ -29,21 +29,6 @@ else:
 
     print("💾 SQLite mode activated (desktop/local mode)")
 
-def get_db_connection():
-    """Return a connection to the correct database based on environment"""
-    if USE_POSTGRES:
-        return psycopg.connect(
-            dbname=os.getenv("POSTGRES_DB", "quantum_journal_db"),
-            user=os.getenv("POSTGRES_USER", "quantum_user"),
-            password=os.getenv("POSTGRES_PASSWORD", "quantum_pass"),
-            host=os.getenv("POSTGRES_HOST", "localhost"),
-            port=os.getenv("POSTGRES_PORT", "5432")
-        )
-    else:
-        db_path = os.path.join(os.getcwd(), "database", "quantum_journal.db")
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
-        return sqlite3.connect(db_path)
-
 # -----------------------------------------------------------------------------
 # SQLite3 Date Deprecation Fix for Python 3.12+
 # -----------------------------------------------------------------------------
@@ -87,12 +72,128 @@ def convert_trade_dates(trades_list):
                 pass  # Keep as string if conversion fails
     return trades_list
 
+# -----------------------------------------------------------------------------
+# HYBRID DATABASE MANAGER
+# -----------------------------------------------------------------------------
 class HybridDatabaseManager:
     """Handle database migration between SQLite and PostgreSQL"""
     
     def __init__(self):
-        self.db_manager = db_manager
+        self.db_type = self.detect_environment()
+        self.connection = None
+        print(f"🔍 Environment detected: {self.db_type.upper()} mode")
     
+    def detect_environment(self):
+        """Auto-detect if running as web app or desktop app"""
+        web_indicators = [
+            'DATABASE_URL' in os.environ,
+            'RAILWAY_ENVIRONMENT' in os.environ,
+            'HEROKU' in os.environ,
+            'RENDER' in os.environ,
+            'FLY_APP_NAME' in os.environ,
+            any('pythonanywhere' in key.lower() for key in os.environ.keys())
+        ]
+        
+        if any(web_indicators):
+            return 'postgresql'
+        else:
+            return 'sqlite'
+    
+    def get_connection(self):
+        """Get appropriate database connection based on environment"""
+        if self.db_type == 'postgresql':
+            return self.get_postgresql_connection()
+        else:
+            return self.get_sqlite_connection()
+    
+    def get_postgresql_connection(self):
+        """Get PostgreSQL connection for web environment"""
+        try:
+            import psycopg
+            from psycopg.rows import dict_row
+
+            database_url = os.environ.get('DATABASE_URL')
+            if database_url and database_url.startswith('postgres://'):
+                database_url = database_url.replace('postgres://', 'postgresql://', 1)
+            
+            if database_url:
+                conn = psycopg.connect(database_url, row_factory=dict_row)
+                conn.db_type = 'postgresql'
+                return conn
+            else:
+                # Fallback to local PostgreSQL
+                conn = psycopg.connect(
+                    host=os.environ.get('PGHOST', 'localhost'),
+                    dbname=os.environ.get('PGDATABASE', 'mt5_journal'),
+                    user=os.environ.get('PGUSER', 'postgres'),
+                    password=os.environ.get('PGPASSWORD', ''),
+                    port=os.environ.get('PGPORT', 5432),
+                    row_factory=dict_row
+                )
+                conn.db_type = 'postgresql'
+                return conn
+        except Exception as e:
+            print(f"❌ PostgreSQL connection failed: {e}, falling back to SQLite")
+            self.db_type = 'sqlite'
+            return self.get_sqlite_connection()
+    
+    def get_sqlite_connection(self):
+        """Get SQLite connection for local/desktop environment."""
+        try:
+            # Define DB_PATH for SQLite
+            DB_PATH = os.path.join(os.getcwd(), "database", "quantum_journal.db")
+            os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+            # Connect to SQLite database
+            conn = sqlite3.connect(DB_PATH, detect_types=sqlite3.PARSE_DECLTYPES)
+            conn.row_factory = sqlite3.Row
+
+            # Enable foreign keys + WAL mode
+            conn.execute("PRAGMA foreign_keys = ON")
+            conn.execute("PRAGMA journal_mode = WAL")
+
+            # IMPORTANT: Set database type on the class, NOT on the SQLite connection
+            self.db_type = "sqlite"
+
+            return conn
+
+        except Exception as e:
+            print(f"❌ SQLite connection failed: {e}")
+            raise
+
+    def execute_query(self, query, params=None):
+        """Execute SQL query with automatic parameter style handling."""
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+
+            # Convert SQLite-style '?' params → PostgreSQL-style '%s' params
+            if self.db_type == "postgresql":
+                query = query.replace("?", "%s")
+
+            # Execute query
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+
+            # SELECT → return rows
+            if query.strip().upper().startswith("SELECT"):
+                rows = cursor.fetchall()
+                return [dict(row) for row in rows]
+
+            # Non-select → commit changes
+            conn.commit()
+            return cursor.rowcount
+
+        except Exception as e:
+            conn.rollback()
+            print(f"❌ Query failed: {e}")
+            raise e
+
+        finally:
+            conn.close()
+
     def export_to_sqlite(self, postgres_conn, sqlite_path):
         """Export from PostgreSQL to SQLite"""
         try:
@@ -112,6 +213,9 @@ class HybridDatabaseManager:
             print(f'Export to SQLite failed: {e}')
             return False
 
+# -----------------------------------------------------------------------------
+# ERROR HANDLER
+# -----------------------------------------------------------------------------
 class HybridErrorHandler:
     """Handle errors differently for web vs desktop"""
     
@@ -127,6 +231,9 @@ class HybridErrorHandler:
             # For desktop: Attempt recovery or use demo data
             return {'success': True, 'demo_mode': True, 'message': 'Using demo data'}
 
+# -----------------------------------------------------------------------------
+# UNIVERSAL HELPER FUNCTIONS
+# -----------------------------------------------------------------------------
 def get_universal_connection():
     """Universal connection that works for both PostgreSQL and SQLite"""
     return db_manager.get_connection()
@@ -159,138 +266,9 @@ def conn_fetch_dataframe(conn, query, params=None):
         print(f"Dataframe fetch error: {e}")
         return pd.DataFrame()
 
-def detect_environment():
-    """Enhanced environment detection for hybrid mode"""
-    # Web environment indicators
-    web_indicators = [
-        'DATABASE_URL' in os.environ,
-        'RAILWAY_ENVIRONMENT' in os.environ,
-        'HEROKU' in os.environ,
-        'RENDER' in os.environ,
-        'FLY_APP_NAME' in os.environ,
-        any('pythonanywhere' in key.lower() for key in os.environ.keys())
-    ]
-    
-    if any(web_indicators):
-        return 'postgresql'
-    else:
-        return 'sqlite'
-
-class HybridDatabaseManager:
-    def __init__(self):
-        self.db_type = self.detect_environment()
-        self.connection = None
-        print(f"🔍 Environment detected: {self.db_type.upper()} mode")
-    
-    def detect_environment(self):
-        """Auto-detect if running as web app or desktop app"""
-        # Web environment indicators
-        web_indicators = [
-            'DATABASE_URL' in os.environ,
-            'RAILWAY_ENVIRONMENT' in os.environ,
-            'HEROKU' in os.environ,
-            'RENDER' in os.environ,
-            any('pythonanywhere' in key.lower() for key in os.environ.keys())
-        ]
-        
-        if any(web_indicators):
-            return 'postgresql'
-        else:
-            return 'sqlite'
-    
-    def get_connection(self):
-        """Get appropriate database connection based on environment"""
-        if self.db_type == 'postgresql':
-            return self.get_postgresql_connection()
-        else:
-            return self.get_sqlite_connection()
-    
-    def get_postgresql_connection(self):
-        """Get PostgreSQL connection for web environment"""
-        try:
-            database_url = os.environ.get('DATABASE_URL')
-            if database_url and database_url.startswith('postgres://'):
-                database_url = database_url.replace('postgres://', 'postgresql://', 1)
-            
-            if database_url:
-                conn = psycopg.connect(database_url, row_factory=dict_row)
-                conn.db_type = 'postgresql'
-                return conn
-            else:
-                # Fallback to local PostgreSQL
-                conn = psycopg.connect(
-                    host=os.environ.get('PGHOST', 'localhost'),
-                    dbname=os.environ.get('PGDATABASE', 'mt5_journal'),
-                    user=os.environ.get('PGUSER', 'postgres'),
-                    password=os.environ.get('PGPASSWORD', ''),
-                    port=os.environ.get('PGPORT', 5432),
-                    row_factory=dict_row
-                )
-                conn.db_type = 'postgresql'
-                return conn
-        except Exception as e:
-            print(f"❌ PostgreSQL connection failed: {e}, falling back to SQLite")
-            return self.get_sqlite_connection()
-    
-    def get_sqlite_connection(self):
-    """Get SQLite connection for local/desktop environment."""
-    try:
-        # Define DB_PATH for SQLite
-        DB_PATH = os.path.join(os.getcwd(), "database", "quantum_journal.db")
-        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-
-        # Connect to SQLite database
-        conn = sqlite3.connect(DB_PATH, detect_types=sqlite3.PARSE_DECLTYPES)
-        conn.row_factory = sqlite3.Row
-
-        # Enable foreign keys + WAL mode
-        conn.execute("PRAGMA foreign_keys = ON")
-        conn.execute("PRAGMA journal_mode = WAL")
-
-        # IMPORTANT: Set database type on the class, NOT on the SQLite connection
-        self.db_type = "sqlite"
-
-        return conn
-
-    except Exception as e:
-        print(f"❌ SQLite connection failed: {e}")
-        raise
-
-
-def execute_query(self, query, params=None):
-    """Execute SQL query with automatic parameter style handling."""
-    conn = self.get_connection()
-    try:
-        cursor = conn.cursor()
-
-        # Convert SQLite-style '?' params → PostgreSQL-style '%s' params
-        if self.db_type == "postgresql":
-            query = query.replace("?", "%s")
-
-        # Execute query
-        if params:
-            cursor.execute(query, params)
-        else:
-            cursor.execute(query)
-
-        # SELECT → return rows
-        if query.strip().upper().startswith("SELECT"):
-            rows = cursor.fetchall()
-            return [dict(row) for row in rows]
-
-        # Non-select → commit changes
-        conn.commit()
-        return cursor.rowcount
-
-    except Exception as e:
-        conn.rollback()
-        print(f"❌ Query failed: {e}")
-        raise e
-
-    finally:
-        conn.close()
-
-
+# -----------------------------------------------------------------------------
+# INITIALIZATION
+# -----------------------------------------------------------------------------
 # Initialize hybrid database manager
 db_manager = HybridDatabaseManager()
 
