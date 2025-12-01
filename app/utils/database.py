@@ -286,19 +286,22 @@ os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 # -----------------------------------------------------------------------------
 def init_database():
     """Initialize database with hybrid schema compatibility"""
+    # Get a connection
     conn = db_manager.get_connection()
     
     try:
-        if conn.db_type == 'postgresql':
+        # Use manager's db_type instead of connection attribute
+        if db_manager.db_type == 'postgresql':
             init_postgresql_schema(conn)
         else:
             init_sqlite_schema(conn)
-        
-        print(f"✅ {conn.db_type.upper()} database initialized successfully!")
-        
+
+        print(f"✅ {db_manager.db_type.upper()} database initialized successfully!")
+
     except Exception as e:
         print(f"❌ Database initialization error: {e}")
         raise
+
     finally:
         conn.close()
 
