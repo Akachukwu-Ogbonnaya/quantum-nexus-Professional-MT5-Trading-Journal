@@ -17,13 +17,11 @@ numpy==1.26.4
 # Web server
 gunicorn==21.2.0
 
-# Build tools (safe versions)
 setuptools==69.0.2
 cython==3.0.8
 
 # Database (PostgreSQL)
 psycopg[binary]==3.2.3
 
-# Optional – will be skipped on Linux if unavailable
-MetaTrader5==5.0.37
-
+# Optional Windows-only dependency
+MetaTrader5; platform_system == "Windows"
