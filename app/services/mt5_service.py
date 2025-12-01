@@ -3,7 +3,7 @@ import time
 import threading
 import pandas as pd
 import numpy as np
-from utils.config import config
+from ..utils.config import config
 from utils.database import db_manager, get_db_connection
 from utils import add_log
 from datetime import datetime, timedelta
