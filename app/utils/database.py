@@ -233,57 +233,63 @@ class HybridDatabaseManager:
             return self.get_sqlite_connection()
     
     def get_sqlite_connection(self):
-        """Get SQLite connection for desktop environment"""
-        try:
-            # Define DB_PATH for SQLite
-            DB_PATH = os.path.join(os.getcwd(), "database", "quantum_journal.db")
-            os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-            
-            # Connect with date adapters
-            conn = sqlite3.connect(DB_PATH, detect_types=sqlite3.PARSE_DECLTYPES)
-            conn.row_factory = sqlite3.Row
-            conn.db_type = 'sqlite'
-            
-            # Enable foreign keys and WAL mode for better performance
-            conn.execute('PRAGMA foreign_keys = ON')
-            conn.execute('PRAGMA journal_mode = WAL')
-            
-            return conn
-        except Exception as e:
-            print(f"❌ SQLite connection failed: {e}")
-            raise
-    
-    def execute_query(self, query, params=None):
-        """Execute query with appropriate parameter style for current database"""
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            
-            # Convert parameter style if needed
-            if self.db_type == 'postgresql' and '?' in query:
-                query = query.replace('?', '%s')
-            
-            if params:
-                cursor.execute(query, params)
-            else:
-                cursor.execute(query)
-            
-            if query.strip().upper().startswith('SELECT'):
-                result = cursor.fetchall()
-                # Convert to dict for consistency
-                if self.db_type == 'postgresql':
-                    return [dict(row) for row in result]
-                else:
-                    return [dict(row) for row in result]
-            else:
-                conn.commit()
-                return cursor.rowcount
-                
-        except Exception as e:
-            conn.rollback()
-            raise e
-        finally:
-            conn.close()
+    """Get SQLite connection for local/desktop environment."""
+    try:
+        # Define DB_PATH for SQLite
+        DB_PATH = os.path.join(os.getcwd(), "database", "quantum_journal.db")
+        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+        # Connect to SQLite database
+        conn = sqlite3.connect(DB_PATH, detect_types=sqlite3.PARSE_DECLTYPES)
+        conn.row_factory = sqlite3.Row
+
+        # Enable foreign keys + WAL mode
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute("PRAGMA journal_mode = WAL")
+
+        # IMPORTANT: Set database type on the class, NOT on the SQLite connection
+        self.db_type = "sqlite"
+
+        return conn
+
+    except Exception as e:
+        print(f"❌ SQLite connection failed: {e}")
+        raise
+
+
+def execute_query(self, query, params=None):
+    """Execute SQL query with automatic parameter style handling."""
+    conn = self.get_connection()
+    try:
+        cursor = conn.cursor()
+
+        # Convert SQLite-style '?' params → PostgreSQL-style '%s' params
+        if self.db_type == "postgresql":
+            query = query.replace("?", "%s")
+
+        # Execute query
+        if params:
+            cursor.execute(query, params)
+        else:
+            cursor.execute(query)
+
+        # SELECT → return rows
+        if query.strip().upper().startswith("SELECT"):
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+
+        # Non-select → commit changes
+        conn.commit()
+        return cursor.rowcount
+
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Query failed: {e}")
+        raise e
+
+    finally:
+        conn.close()
+
 
 # Initialize hybrid database manager
 db_manager = HybridDatabaseManager()
