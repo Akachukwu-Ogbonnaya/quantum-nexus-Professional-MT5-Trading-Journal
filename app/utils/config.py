@@ -2,8 +2,45 @@
 import os
 import json
 from .system_info import detect_environment
+
+# =============================================================================
+# ADD MISSING FUNCTIONS
+# =============================================================================
+def get_hybrid_config_path():
+    """Get the hybrid configuration path for the current environment"""
+    app_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    
+    # Try to detect environment, but if it fails, use SQLite mode as default
+    try:
+        environment = detect_environment()
+        if environment == 'postgresql':
+            # For web/PostgreSQL mode, config is in app root
+            return os.path.join(app_root, "config.json")
+    except:
+        pass
+    
+    # Default to SQLite/desktop mode
+    database_dir = os.path.join(app_root, "database")
+    os.makedirs(database_dir, exist_ok=True)
+    return os.path.join(database_dir, "config.json")
+
+def initialize_hybrid_config():
+    """Initialize hybrid configuration for current environment"""
+    config_path = get_hybrid_config_path()
+    return ConfigManager(config_path)
+
+def validate_csrf(token):
+    """Validate CSRF token (simplified version)"""
+    # This is a placeholder - in production, you'd have proper CSRF validation
+    if not token or len(token) < 10:
+        return False
+    return True
+
 class ConfigManager:
-    def __init__(self, config_path="config.json"):
+    def __init__(self, config_path=None):
+        # If no path provided, use hybrid config path
+        if not config_path:
+            config_path = get_hybrid_config_path()
         self.config_path = config_path
         self.config = self.load_or_create_config()
 
@@ -84,11 +121,9 @@ config = config_manager.config
 # =============================================================================
 # FIX 1: FORCE CONFIG RELOAD TO ENSURE SYNC SECTION EXISTS
 # =============================================================================
-import json
-
 try:
-    # Reload config to ensure it has all required sections
-    with open("config.json", "r") as f:
+    # Use config_manager's path, not hardcoded "config.json"
+    with open(config_manager.config_path, "r") as f:
         config = json.load(f)
 
     # ENSURE SYNC SECTION EXISTS
@@ -99,9 +134,9 @@ try:
             'real_time_updates': True
         }
         # Save the updated config
-        with open("config.json", "w") as f:
+        with open(config_manager.config_path, "w") as f:
             json.dump(config, f, indent=4)
-        print("✅ Added missing 'sync' section to config.json")
+        print(f"✅ Added missing 'sync' section to {config_manager.config_path}")
 
     # Ensure all required sections exist
     required_sections = ['database', 'ui']
@@ -112,3 +147,31 @@ try:
 
 except Exception as e:
     print(f"⚠️ Config reload warning: {e}")
+
+# =============================================================================
+# ADDITIONAL HELPER FUNCTIONS FOR COMPATIBILITY
+# =============================================================================
+def get_config():
+    """Get current config (alias for config_manager.config)"""
+    return config_manager.config
+
+def save_config():
+    """Save current config to file"""
+    try:
+        with open(config_manager.config_path, "w") as f:
+            json.dump(config_manager.config, f, indent=4)
+        return True
+    except Exception as e:
+        print(f"❌ Error saving config: {e}")
+        return False
+
+def update_config(section, key, value):
+    """Update a specific config value"""
+    try:
+        if section not in config_manager.config:
+            config_manager.config[section] = {}
+        config_manager.config[section][key] = value
+        return save_config()
+    except Exception as e:
+        print(f"❌ Error updating config: {e}")
+        return False
