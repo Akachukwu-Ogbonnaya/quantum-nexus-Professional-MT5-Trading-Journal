@@ -3,11 +3,18 @@ import threading
 import time
 import pandas as pd
 import numpy as np
-from utils.config import config
-from utils.database import db_manager, get_db_connection
-from utils import add_log
-from services.mt5_service import mt5_manager, MT5_AVAILABLE, mt5
+import sqlite3
+from decimal import InvalidOperation
 from datetime import datetime, timedelta
+
+# FIXED: Changed all 'utils.' imports to 'app.utils.'
+from app.utils.config import config
+from app.utils.database import db_manager, get_db_connection
+from app.utils import add_log, trading_calc, safe_float_conversion
+from app.services.mt5_service import mt5_service, MT5_AVAILABLE
+
+# Note: socketio and calendar_dashboard need to be imported from their modules
+# These will be imported when needed or passed as parameters
 
 class ProfessionalDataStore:
     def __init__(self):
@@ -23,12 +30,17 @@ class ProfessionalDataStore:
         self.last_update = None
 
 class ProfessionalDataSynchronizer:
-    def __init__(self):
+    def __init__(self, socketio=None, calendar_dashboard=None):
+        self.socketio = socketio
+        self.calendar_dashboard = calendar_dashboard
         self.sync_lock = threading.Lock()
         self.last_sync = None
         sync_config = config.get('sync', {})
         self.sync_interval = sync_config.get('auto_sync_interval', 300)
         self.days_history = sync_config.get('days_history', 90)
+        
+        # Initialize global data
+        self.global_data = ProfessionalDataStore()
 
     def sync_with_mt5(self, force=False):
         if not self.sync_lock.acquire(blocking=False) and not force:
@@ -49,23 +61,27 @@ class ProfessionalDataSynchronizer:
             success = self.update_database_hybrid(trades, account_data)
 
             if success:
-                with global_data.data_lock:
-                    global_data.trades = trades
-                    global_data.account_data = account_data
-                    global_data.open_positions = [t for t in trades if t.get('status') == 'OPEN']
-                    global_data.last_update = datetime.now()
-                    global_data.initial_import_done = True
+                with self.global_data.data_lock:
+                    self.global_data.trades = trades
+                    self.global_data.account_data = account_data
+                    self.global_data.open_positions = [t for t in trades if t.get('status') == 'OPEN']
+                    self.global_data.last_update = datetime.now()
+                    self.global_data.initial_import_done = True
 
-                calendar_dashboard.update_daily_calendar()
+                # Update calendar if available
+                if self.calendar_dashboard:
+                    self.calendar_dashboard.update_daily_calendar()
 
                 self.last_sync = datetime.now()
                 add_log('INFO', f'Professional sync completed: {len(trades)} trades', 'Sync')
 
-                socketio.emit('data_updated', {
-                    'timestamp': datetime.now().isoformat(),
-                    'trades_count': len(trades),
-                    'open_positions': len(global_data.open_positions)
-                }, namespace='/realtime')
+                # Emit socketio event if available
+                if self.socketio:
+                    self.socketio.emit('data_updated', {
+                        'timestamp': datetime.now().isoformat(),
+                        'trades_count': len(trades),
+                        'open_positions': len(self.global_data.open_positions)
+                    }, namespace='/realtime')
 
             return success
 
@@ -79,23 +95,24 @@ class ProfessionalDataSynchronizer:
                 pass
 
     def get_account_data(self):
-        if not MT5_AVAILABLE or not mt5_manager.connected:
+        if not MT5_AVAILABLE or not mt5_service.connected:
             return self.get_demo_account_data()
 
         try:
-            account_info = mt5.account_info()
+            # Use the mt5_service instance
+            account_info = mt5_service.get_account_info()
             if account_info:
                 return {
-                    'balance': float(account_info.balance),
-                    'equity': float(account_info.equity),
-                    'margin': float(account_info.margin),
-                    'free_margin': float(account_info.margin_free),
-                    'leverage': int(account_info.leverage),
-                    'currency': account_info.currency,
-                    'server': account_info.server,
-                    'login': account_info.login,
-                    'name': getattr(account_info, 'name', 'Unknown'),
-                    'company': getattr(account_info, 'company', 'Unknown')
+                    'balance': float(account_info.get('balance', 0)),
+                    'equity': float(account_info.get('equity', 0)),
+                    'margin': float(account_info.get('margin', 0)),
+                    'free_margin': float(account_info.get('free_margin', 0)),
+                    'leverage': int(account_info.get('leverage', 100)),
+                    'currency': account_info.get('currency', 'USD'),
+                    'server': account_info.get('server', 'Unknown'),
+                    'login': account_info.get('login', 0),
+                    'name': account_info.get('name', 'Unknown'),
+                    'company': account_info.get('company', 'Unknown')
                 }
         except Exception as e:
             add_log('ERROR', f'Error getting account data: {e}', 'Sync')
@@ -117,108 +134,53 @@ class ProfessionalDataSynchronizer:
         }
 
     def get_trade_history(self, days_back):
-        if not MT5_AVAILABLE or not mt5_manager.connected:
+        if not MT5_AVAILABLE or not mt5_service.connected:
             return self.get_professional_demo_trades()
 
         try:
-            from_date = datetime.now() - timedelta(days=days_back)
-            to_date = datetime.now() + timedelta(days=1)
-
-            deals = mt5.history_deals_get(from_date, to_date) or []
-            positions = mt5.positions_get() or []
-
-            trades = {}
-            current_account_balance = mt5.account_info().balance if mt5_manager.connected else 10000
-
-            for deal in deals:
-                try:
-                    if deal.entry in [0, 1]:
-                        trade = self.process_professional_deal(deal, current_account_balance)
-                        if trade:
-                            trades[deal.ticket] = trade
-                except Exception as e:
-                    add_log('ERROR', f'Error processing deal {deal.ticket}: {e}', 'Sync')
-                    continue
-
-            for position in positions:
-                try:
-                    trade = self.process_professional_position(position, current_account_balance)
-                    if trade:
-                        trades[position.ticket] = trade
-                except Exception as e:
-                    add_log('ERROR', f'Error processing position {position.ticket}: {e}', 'Sync')
-                    continue
-
-            trades_list = list(trades.values())
-            trades_list.sort(key=lambda x: x.get('entry_time', datetime.min), reverse=True)
-            return trades_list
+            # Use mt5_service to get history
+            history = mt5_service.get_history(days_back)
+            trades = []
+            
+            # Process history into trades
+            for item in history:
+                trade = self.process_trade_item(item)
+                if trade:
+                    trades.append(trade)
+            
+            trades.sort(key=lambda x: x.get('entry_time', datetime.min), reverse=True)
+            return trades
 
         except Exception as e:
             add_log('ERROR', f'Error getting trade history: {e}', 'Sync')
             return self.get_professional_demo_trades()
 
-    def process_professional_deal(self, deal, account_balance):
+    def process_trade_item(self, item):
+        """Process a trade item from MT5 service"""
         try:
-            trade_type = self.get_trade_type(deal.type)
-
             trade = {
-                'ticket_id': deal.ticket,
-                'symbol': deal.symbol,
-                'type': trade_type,
-                'volume': deal.volume,
-                'entry_price': deal.price,
-                'exit_price': deal.price,
-                'profit': deal.profit,
-                'commission': getattr(deal, 'commission', 0),
-                'swap': getattr(deal, 'swap', 0),
-                'comment': getattr(deal, 'comment', ''),
-                'magic_number': getattr(deal, 'magic', 0),
-                'entry_time': datetime.fromtimestamp(deal.time),
-                'exit_time': datetime.fromtimestamp(deal.time),
-                'status': 'CLOSED',
-                'account_balance': account_balance,
-                'account_equity': account_balance + deal.profit
+                'ticket_id': item.get('ticket', 0),
+                'symbol': item.get('symbol', ''),
+                'type': item.get('type', 'UNKNOWN'),
+                'volume': item.get('volume', 0),
+                'entry_price': item.get('entry_price', 0),
+                'exit_price': item.get('exit_price', 0),
+                'current_price': item.get('current_price', 0),
+                'profit': item.get('profit', 0),
+                'commission': item.get('commission', 0),
+                'swap': item.get('swap', 0),
+                'comment': item.get('comment', ''),
+                'magic_number': item.get('magic', 0),
+                'entry_time': item.get('time', datetime.now()),
+                'status': 'CLOSED' if item.get('profit') is not None else 'OPEN'
             }
-
+            
+            # Calculate additional metrics
             trade = self.calculate_trade_metrics(trade)
             return trade
-
+            
         except Exception as e:
-            add_log('ERROR', f'Error processing deal {getattr(deal, "ticket", "unknown")}: {e}', 'Sync')
-            return None
-
-    def process_professional_position(self, position, account_balance):
-        try:
-            trade_type = self.get_trade_type(position.type)
-            current_price = getattr(position, 'price_current', position.price_open)
-            floating_pnl = position.profit
-
-            trade = {
-                'ticket_id': position.ticket,
-                'symbol': position.symbol,
-                'type': trade_type,
-                'volume': position.volume,
-                'entry_price': position.price_open,
-                'current_price': current_price,
-                'sl_price': getattr(position, 'sl', 0),
-                'tp_price': getattr(position, 'tp', 0),
-                'profit': floating_pnl,
-                'commission': 0,
-                'swap': 0,
-                'comment': getattr(position, 'comment', ''),
-                'magic_number': getattr(position, 'magic', 0),
-                'entry_time': datetime.fromtimestamp(position.time),
-                'status': 'OPEN',
-                'floating_pnl': floating_pnl,
-                'account_balance': account_balance,
-                'account_equity': account_balance + floating_pnl
-            }
-
-            trade = self.calculate_trade_metrics(trade)
-            return trade
-
-        except Exception as e:
-            add_log('ERROR', f'Error processing position {getattr(position, "ticket", "unknown")}: {e}', 'Sync')
+            add_log('ERROR', f'Error processing trade item: {e}', 'Sync')
             return None
 
     def get_trade_type(self, mt5_type):
@@ -234,6 +196,7 @@ class ProfessionalDataSynchronizer:
 
     def calculate_trade_metrics(self, trade):
         try:
+            # Calculate risk-reward ratio
             if trade.get('sl_price') and trade['sl_price'] > 0:
                 trade['actual_rr'] = trading_calc.calculate_risk_reward(
                     trade['entry_price'],
@@ -244,6 +207,7 @@ class ProfessionalDataSynchronizer:
             else:
                 trade['actual_rr'] = None
 
+            # Calculate duration
             if trade.get('exit_time'):
                 trade['duration'] = trading_calc.calculate_trade_duration(
                     trade['entry_time'], trade['exit_time']
@@ -251,6 +215,7 @@ class ProfessionalDataSynchronizer:
             else:
                 trade['duration'] = 'Active'
 
+            # Calculate account change percentage
             if trade.get('account_balance') and trade.get('account_equity'):
                 trade['account_change_percent'] = trading_calc.calculate_account_change_percent(
                     trade['account_balance'], trade['account_equity']
@@ -258,6 +223,7 @@ class ProfessionalDataSynchronizer:
             else:
                 trade['account_change_percent'] = 0
 
+            # Calculate risk per trade
             if trade.get('account_balance'):
                 trade['risk_per_trade'] = round(
                     abs(trade.get('profit', 0)) / trade['account_balance'] * 100, 2
@@ -271,11 +237,13 @@ class ProfessionalDataSynchronizer:
         return trade
 
     def get_professional_demo_trades(self):
+        """Generate professional demo trades"""
         demo_trades = []
         symbols = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'US30', 'BTCUSD']
         base_time = datetime.now() - timedelta(days=60)
         base_balance = 10000
 
+        # Generate closed trades
         for i in range(125):
             symbol = symbols[i % len(symbols)]
             is_win = i % 3 != 0
@@ -314,6 +282,7 @@ class ProfessionalDataSynchronizer:
             trade = self.calculate_trade_metrics(trade)
             demo_trades.append(trade)
 
+        # Generate open positions
         for i in range(8):
             symbol = symbols[i % len(symbols)]
             trade = {
@@ -488,8 +457,9 @@ class ProfessionalDataSynchronizer:
             add_log('ERROR', f'Hybrid account history update error: {e}', 'Database')
 
 class ProfessionalAutoSyncThread(threading.Thread):
-    def __init__(self, interval=300):
+    def __init__(self, data_synchronizer, interval=300):
         super().__init__(daemon=True)
+        self.data_synchronizer = data_synchronizer
         self.interval = interval
         self.running = True
         self.last_backup = None
@@ -499,13 +469,13 @@ class ProfessionalAutoSyncThread(threading.Thread):
 
         while self.running:
             try:
-                data_synchronizer.sync_with_mt5()
+                self.data_synchronizer.sync_with_mt5()
 
                 now = datetime.now()
                 if (self.last_backup is None or
                     (now.hour == 2 and now.minute < 5 and
                      (self.last_backup is None or self.last_backup.date() != now.date()))):
-                    backup_database()
+                    self.backup_database()
                     self.last_backup = now
 
             except Exception as e:
@@ -519,43 +489,38 @@ class ProfessionalAutoSyncThread(threading.Thread):
     def stop(self):
         self.running = False
 
-def backup_database():
-    try:
-        if not os.path.exists('database/backups'):
-            os.makedirs('database/backups')
-        
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_file = f'database/backups/backup_{timestamp}.db'
-        
-        conn = get_db_connection()
-        if hasattr(conn, 'backup'):
-            backup_conn = sqlite3.connect(backup_file)
-            conn.backup(backup_conn)
-            backup_conn.close()
-        
-        conn.close()
-        add_log('INFO', f'Database backup created: {backup_file}', 'Backup')
-        return True
-    except Exception as e:
-        add_log('ERROR', f'Backup error: {e}', 'Backup')
-        return False
+    def backup_database(self):
+        try:
+            if not os.path.exists('database/backups'):
+                os.makedirs('database/backups')
+            
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_file = f'database/backups/backup_{timestamp}.db'
+            
+            conn = get_db_connection()
+            if hasattr(conn, 'backup'):
+                backup_conn = sqlite3.connect(backup_file)
+                conn.backup(backup_conn)
+                backup_conn.close()
+            
+            conn.close()
+            add_log('INFO', f'Database backup created: {backup_file}', 'Backup')
+            return True
+        except Exception as e:
+            add_log('ERROR', f'Backup error: {e}', 'Backup')
+            return False
 
-def safe_float_conversion(value, default=0.0):
-    if value is None:
-        return default
+# Note: The safe_float_conversion function is now imported from app.utils
+# Remove the duplicate definition at the bottom of the file
 
-    try:
-        if isinstance(value, (int, float)):
-            return float(value)
-        if isinstance(value, str):
-            cleaned = value.replace(',', '').replace('$', '').replace(' ', '').strip()
-            if cleaned:
-                return float(cleaned)
-        return default
-    except (ValueError, TypeError, InvalidOperation):
-        return default
-
-# Global instances
-global_data = ProfessionalDataStore()
-data_synchronizer = ProfessionalDataSynchronizer()
-auto_sync_thread = ProfessionalAutoSyncThread(interval=config['sync'].get('auto_sync_interval', 300))
+# Create global instance
+# Note: This should be initialized in the main application, not here
+# We'll create a factory function instead
+def create_sync_service(socketio=None, calendar_dashboard=None):
+    """Factory function to create sync service with dependencies"""
+    synchronizer = ProfessionalDataSynchronizer(socketio, calendar_dashboard)
+    auto_sync_thread = ProfessionalAutoSyncThread(
+        synchronizer, 
+        interval=config.get('sync', {}).get('auto_sync_interval', 300)
+    )
+    return synchronizer, auto_sync_thread
