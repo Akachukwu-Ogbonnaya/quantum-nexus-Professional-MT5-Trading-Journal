@@ -523,4 +523,199 @@ def create_sync_service(socketio=None, calendar_dashboard=None):
         synchronizer, 
         interval=config.get('sync', {}).get('auto_sync_interval', 300)
     )
+
+    # ============================================================================
+# SyncService Class (for backward compatibility and clean imports)
+# ============================================================================
+
+class SyncService:
+    """
+    Main SyncService class that wraps ProfessionalDataSynchronizer for clean imports.
+    This provides backward compatibility and a clean interface for the rest of the application.
+    """
+    
+    def __init__(self, socketio=None, calendar_dashboard=None):
+        """
+        Initialize SyncService with optional dependencies.
+        
+        Args:
+            socketio: SocketIO instance for real-time updates
+            calendar_dashboard: Calendar dashboard instance for calendar updates
+        """
+        self.synchronizer = ProfessionalDataSynchronizer(socketio, calendar_dashboard)
+        self.auto_sync_thread = None
+        
+    def init_app(self, app):
+        """
+        Initialize with Flask app and start auto-sync thread.
+        
+        Args:
+            app: Flask application instance
+        """
+        # Store app reference
+        self.app = app
+        
+        # Start auto-sync thread if auto-sync is enabled
+        sync_config = config.get('sync', {})
+        auto_sync = sync_config.get('auto_sync', True)
+        
+        if auto_sync:
+            self.auto_sync_thread = ProfessionalAutoSyncThread(
+                self.synchronizer,
+                interval=sync_config.get('auto_sync_interval', 300)
+            )
+            self.auto_sync_thread.start()
+            add_log('Auto-sync thread started', 'INFO', 'SyncService')
+        
+        add_log('SyncService initialized with Flask app', 'INFO', 'SyncService')
+        return self
+    
+    def sync_trades(self, force=False):
+        """
+        Sync trades with MT5/database.
+        
+        Args:
+            force: Force sync even if recently synced
+            
+        Returns:
+            dict: Sync result
+        """
+        result = self.synchronizer.sync_with_mt5(force)
+        
+        if result:
+            trades = self.synchronizer.global_data.trades
+            open_positions = self.synchronizer.global_data.open_positions
+            
+            return {
+                'success': True,
+                'trades_synced': len(trades),
+                'open_positions': len(open_positions),
+                'last_update': self.synchronizer.global_data.last_update.isoformat() 
+                if self.synchronizer.global_data.last_update else None
+            }
+        else:
+            return {
+                'success': False,
+                'error': 'Sync failed',
+                'trades_synced': 0
+            }
+    
+    def get_trades(self):
+        """
+        Get all trades from synchronized data.
+        
+        Returns:
+            list: List of trades
+        """
+        return self.synchronizer.global_data.trades
+    
+    def get_open_positions(self):
+        """
+        Get open positions.
+        
+        Returns:
+            list: List of open positions
+        """
+        return self.synchronizer.global_data.open_positions
+    
+    def get_account_data(self):
+        """
+        Get account data.
+        
+        Returns:
+            dict: Account data
+        """
+        return self.synchronizer.global_data.account_data
+    
+    def get_calculated_stats(self):
+        """
+        Get calculated statistics.
+        
+        Returns:
+            dict: Calculated statistics
+        """
+        # Calculate stats if not already calculated
+        if not self.synchronizer.global_data.calculated_stats:
+            trades = self.get_trades()
+            if trades:
+                self.synchronizer.global_data.calculated_stats = trading_calc.calculate_statistics(trades)
+        
+        return self.synchronizer.global_data.calculated_stats
+    
+    def get_sync_status(self):
+        """
+        Get sync service status.
+        
+        Returns:
+            dict: Sync status
+        """
+        return {
+            'initialized': self.synchronizer.global_data.initial_import_done,
+            'last_sync': self.synchronizer.last_sync.isoformat() if self.synchronizer.last_sync else None,
+            'auto_sync_running': self.auto_sync_thread and self.auto_sync_thread.is_alive() if self.auto_sync_thread else False,
+            'total_trades': len(self.synchronizer.global_data.trades),
+            'open_positions': len(self.synchronizer.global_data.open_positions),
+            'last_update': self.synchronizer.global_data.last_update.isoformat() if self.synchronizer.global_data.last_update else None
+        }
+    
+    def stop_auto_sync(self):
+        """
+        Stop the auto-sync thread.
+        """
+        if self.auto_sync_thread:
+            self.auto_sync_thread.stop()
+            self.auto_sync_thread.join(timeout=5)
+            add_log('Auto-sync thread stopped', 'INFO', 'SyncService')
+    
+    def __getattr__(self, name):
+        """
+        Delegate unknown methods to the synchronizer.
+        
+        Args:
+            name: Method name
+            
+        Returns:
+            Callable: Method from synchronizer
+        """
+        # Delegate to synchronizer if method not found in SyncService
+        if hasattr(self.synchronizer, name):
+            return getattr(self.synchronizer, name)
+        raise AttributeError(f"'SyncService' object has no attribute '{name}'")
+
+
+# Create global instance
+_sync_service_instance = None
+
+
+def get_sync_service(socketio=None, calendar_dashboard=None):
+    """
+    Get or create the global SyncService instance.
+    
+    Args:
+        socketio: SocketIO instance
+        calendar_dashboard: Calendar dashboard instance
+        
+    Returns:
+        SyncService: Global sync service instance
+    """
+    global _sync_service_instance
+    
+    if _sync_service_instance is None:
+        _sync_service_instance = SyncService(socketio, calendar_dashboard)
+    
+    return _sync_service_instance
+
+
+# ============================================================================
+# Module Exports
+# ============================================================================
+
+__all__ = [
+    'ProfessionalDataStore',
+    'ProfessionalDataSynchronizer',
+    'ProfessionalAutoSyncThread',
+    'SyncService',  # ADD THIS LINE - Export the new SyncService class
+    'create_sync_service',
+    'get_sync_service'
+]
     return synchronizer, auto_sync_thread
