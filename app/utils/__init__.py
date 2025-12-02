@@ -19,6 +19,32 @@ import subprocess
 from flask import current_app
 
 # ---------------------------------------------------------------------
+# LOGGING UTILITIES (ADDED)
+# ---------------------------------------------------------------------
+def add_log(message, level="INFO", category="General"):
+    """
+    Log a message to the appropriate output
+    """
+    from datetime import datetime
+    
+    log_entry = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [{level}] [{category}] {message}"
+    
+    # Print to console
+    print(log_entry)
+    
+    # Also write to a log file if possible
+    try:
+        from . import PathManager  # Import locally to avoid circular dependency
+        log_dir = PathManager.get_logs_directory()
+        log_file = os.path.join(log_dir, "application.log")
+        with open(log_file, "a") as f:
+            f.write(log_entry + "\n")
+    except Exception as e:
+        print(f"Failed to write to log file: {e}")
+    
+    return log_entry
+
+# ---------------------------------------------------------------------
 # DATABASE UTILITIES
 # ---------------------------------------------------------------------
 # Only import what actually exists in database.py
@@ -87,6 +113,9 @@ from .installer import (
 
 # Export all utilities for easy access
 __all__ = [
+    # Logging utility (ADDED)
+    'add_log',
+    
     # Database utilities
     'HybridDatabaseManager',
     'get_db_connection', 
@@ -175,12 +204,11 @@ class UtilityManager:
             
             self.initialized = True
             
-            if self.app:
-                self.app.logger.add_log('INFO', 'Utilities initialized successfully', 'UtilityManager')
+            # FIXED: Use the imported add_log function instead of app.logger.add_log
+            add_log('Utilities initialized successfully', 'INFO', 'UtilityManager')
             
         except Exception as e:
-            if self.app:
-                self.app.logger.add_log('ERROR', f'Utility initialization failed: {e}', 'UtilityManager')
+            add_log(f'Utility initialization failed: {e}', 'ERROR', 'UtilityManager')
             raise
     
     def get_utility(self, utility_type):
@@ -316,12 +344,14 @@ class ErrorHandler:
         if environment == 'postgresql':
             # For web: Log and return JSON error
             if current_app:
-                current_app.logger.add_log('ERROR', f'{context} failed: {error}', 'Database')
+                # FIXED: Use add_log instead of current_app.logger.add_log
+                add_log(f'{context} failed: {error}', 'ERROR', 'Database')
             return {'success': False, 'error': 'Database operation failed'}
         else:
             # For desktop: Attempt recovery or use demo data
             if current_app:
-                current_app.logger.add_log('WARNING', f'{context} failed, using demo data: {error}', 'Database')
+                # FIXED: Use add_log instead of current_app.logger.add_log
+                add_log(f'{context} failed, using demo data: {error}', 'WARNING', 'Database')
             return {'success': True, 'demo_mode': True, 'message': 'Using demo data'}
     
     @staticmethod
@@ -336,7 +366,8 @@ class ErrorHandler:
             except Exception as e:
                 # Log the error
                 if current_app:
-                    current_app.logger.add_log('ERROR', f'Route {route_func.__name__} error: {e}', 'Hybrid')
+                    # FIXED: Use add_log instead of current_app.logger.add_log
+                    add_log(f'Route {route_func.__name__} error: {e}', 'ERROR', 'Hybrid')
                 
                 # Return appropriate response based on environment
                 from flask import request, jsonify, redirect, url_for, flash
@@ -354,7 +385,8 @@ class ErrorHandler:
             return func()
         except Exception as e:
             if current_app:
-                current_app.logger.add_log('ERROR', f'{error_context} failed: {e}', 'SafeExecute')
+                # FIXED: Use add_log instead of current_app.logger.add_log
+                add_log(f'{error_context} failed: {e}', 'ERROR', 'SafeExecute')
             return default_return
 
 # Formatting utilities
@@ -483,9 +515,11 @@ def init_utilities(app, config_path="config.json"):
         sqlite3.register_converter("date", DataConverter.convert_date)
         sqlite3.register_converter("datetime", DataConverter.convert_datetime)
     except Exception as e:
-        app.logger.add_log('WARNING', f'SQLite date adapter registration failed: {e}', 'Utilities')
+        # FIXED: Use add_log instead of app.logger.add_log
+        add_log(f'SQLite date adapter registration failed: {e}', 'WARNING', 'Utilities')
     
-    app.logger.add_log('INFO', 'Utilities initialization completed', 'Utilities')
+    # FIXED: Use add_log instead of app.logger.add_log
+    add_log('Utilities initialization completed', 'INFO', 'Utilities')
     return utility_manager
 
 # Global utility access functions
