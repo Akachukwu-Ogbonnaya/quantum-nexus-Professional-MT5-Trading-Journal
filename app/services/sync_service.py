@@ -510,12 +510,10 @@ class ProfessionalAutoSyncThread(threading.Thread):
             add_log('ERROR', f'Backup error: {e}', 'Backup')
             return False
 
-# Note: The safe_float_conversion function is now imported from app.utils
-# Remove the duplicate definition at the bottom of the file
+# ============================================================================
+# Factory function and SyncService Class
+# ============================================================================
 
-# Create global instance
-# Note: This should be initialized in the main application, not here
-# We'll create a factory function instead
 def create_sync_service(socketio=None, calendar_dashboard=None):
     """Factory function to create sync service with dependencies"""
     synchronizer = ProfessionalDataSynchronizer(socketio, calendar_dashboard)
@@ -523,10 +521,8 @@ def create_sync_service(socketio=None, calendar_dashboard=None):
         synchronizer, 
         interval=config.get('sync', {}).get('auto_sync_interval', 300)
     )
+    return synchronizer, auto_sync_thread
 
-    # ============================================================================
-# SyncService Class (for backward compatibility and clean imports)
-# ============================================================================
 
 class SyncService:
     """
@@ -687,29 +683,34 @@ class SyncService:
 _sync_service_instance = None
 
 
-def create_sync_service(socketio=None, calendar_dashboard=None):
-    """Factory function to create sync service with dependencies"""
-    synchronizer = ProfessionalDataSynchronizer(socketio, calendar_dashboard)
-    auto_sync_thread = ProfessionalAutoSyncThread(
-        synchronizer, 
-        interval=config.get('sync', {}).get('auto_sync_interval', 300)
-    )
+def get_sync_service(socketio=None, calendar_dashboard=None):
+    """
+    Get or create the global SyncService instance.
     
-    # RETURN STATEMENT SHOULD BE HERE, INSIDE THE FUNCTION
-    return synchronizer, auto_sync_thread
+    Args:
+        socketio: SocketIO instance
+        calendar_dashboard: Calendar dashboard instance
+        
+    Returns:
+        SyncService: Global sync service instance
+    """
+    global _sync_service_instance
+    
+    if _sync_service_instance is None:
+        _sync_service_instance = SyncService(socketio, calendar_dashboard)
+    
+    return _sync_service_instance
+
 
 # ============================================================================
-# SyncService Class (for backward compatibility and clean imports)
+# Module Exports
 # ============================================================================
-
-class SyncService:
-    # ... rest of the code ...
 
 __all__ = [
     'ProfessionalDataStore',
     'ProfessionalDataSynchronizer',
     'ProfessionalAutoSyncThread',
-    'SyncService',  # ADD THIS LINE - Export the new SyncService class
+    'SyncService',
     'create_sync_service',
     'get_sync_service'
 ]
