@@ -2238,7 +2238,7 @@ if __name__ == "__main__":
 
         host =  "0.0.0.0"
 
-        port = int(os.environ.get("PORT", 8000))
+        port = int(os.environ.get("PORT", 8080))
 
         debug = config["web_app"].get("debug", False)
 
@@ -2280,3 +2280,4 @@ if __name__ == "__main__":
 
 
         print(f" Professional application error: {e}")
+
