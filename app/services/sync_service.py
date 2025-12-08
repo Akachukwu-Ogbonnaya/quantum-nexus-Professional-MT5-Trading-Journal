@@ -687,28 +687,23 @@ class SyncService:
 _sync_service_instance = None
 
 
-def get_sync_service(socketio=None, calendar_dashboard=None):
-    """
-    Get or create the global SyncService instance.
+def create_sync_service(socketio=None, calendar_dashboard=None):
+    """Factory function to create sync service with dependencies"""
+    synchronizer = ProfessionalDataSynchronizer(socketio, calendar_dashboard)
+    auto_sync_thread = ProfessionalAutoSyncThread(
+        synchronizer, 
+        interval=config.get('sync', {}).get('auto_sync_interval', 300)
+    )
     
-    Args:
-        socketio: SocketIO instance
-        calendar_dashboard: Calendar dashboard instance
-        
-    Returns:
-        SyncService: Global sync service instance
-    """
-    global _sync_service_instance
-    
-    if _sync_service_instance is None:
-        _sync_service_instance = SyncService(socketio, calendar_dashboard)
-    
-    return _sync_service_instance
-
+    # RETURN STATEMENT SHOULD BE HERE, INSIDE THE FUNCTION
+    return synchronizer, auto_sync_thread
 
 # ============================================================================
-# Module Exports
+# SyncService Class (for backward compatibility and clean imports)
 # ============================================================================
+
+class SyncService:
+    # ... rest of the code ...
 
 __all__ = [
     'ProfessionalDataStore',
@@ -718,4 +713,3 @@ __all__ = [
     'create_sync_service',
     'get_sync_service'
 ]
-    return synchronizer, auto_sync_thread
